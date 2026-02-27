@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import '../models/photo_entry.dart';
 import '../services/database_helper.dart';
+import '../services/entries_notifier.dart';
 
 class EntryDetailScreen extends StatefulWidget {
   final String imagePath;
@@ -48,7 +49,9 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
       );
 
       await DatabaseHelper().insertEntry(entry);
-      
+      // Notify listeners that a new entry was added
+      EntriesNotifier().notifyEntryAdded();
+
       HapticFeedback.heavyImpact();
       if (!mounted) return;
       
@@ -110,7 +113,7 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
                     decoration: InputDecoration(
                       hintText: "What's on your mind?",
                       filled: true,
-                      fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
+                      fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none,
@@ -148,7 +151,7 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
                             margin: const EdgeInsets.only(right: 12),
                             width: 60,
                             decoration: BoxDecoration(
-                              color: isSelected ? colorScheme.primaryContainer : colorScheme.surfaceVariant.withOpacity(0.3),
+                              color: isSelected ? colorScheme.primaryContainer : colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                 color: isSelected ? colorScheme.primary : Colors.transparent,

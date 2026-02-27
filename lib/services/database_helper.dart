@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/photo_entry.dart';
@@ -70,8 +71,15 @@ class DatabaseHelper {
   }
 
   Future<void> clearAllData() async {
-    Database db = await database;
-    await db.delete('photo_entries');
+    try {
+      Database db = await database;
+      await db.delete('photo_entries');
+      // Also clear the database settings if needed
+      await db.delete('app_settings');
+    } catch (e) {
+      debugPrint('Error clearing all data: $e');
+      rethrow;
+    }
   }
 
   Future<int> getTodaysPhotoCount() async {
@@ -87,5 +95,63 @@ class DatabaseHelper {
     );
 
     return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  // Get entries from this day in previous years
+  Future<List<PhotoEntry>> getOnThisDayEntries() async {
+    Database db = await database;
+    final now = DateTime.now();
+    final month = now.month.toString().padLeft(2, '0');
+    final day = now.day.toString().padLeft(2, '0');
+    final todayStr = "-$month-${day}T"; // Searching for -MM-DDT in ISO string
+
+    // Query for entries where month and day match but year is different
+    final List<Map<String, dynamic>> maps = await db.rawQuery(
+      "SELECT * FROM photo_entries WHERE timestamp LIKE ? AND timestamp NOT LIKE ?",
+      ['%$todayStr%', '${now.year}$todayStr%']
+    );
+
+    return List.generate(maps.length, (i) => PhotoEntry.fromMap(maps[i]));
+  }
+
+  // Calculate the current daily streak
+  Future<int> calculateStreak() async {
+    Database db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'photo_entries',
+      columns: ['timestamp'],
+      orderBy: 'timestamp DESC',
+    );
+
+    if (maps.isEmpty) return 0;
+
+    // Convert to a set of date-only values
+    Set<DateTime> uniqueDates = {};
+    for (var row in maps) {
+      DateTime dt = DateTime.parse(row['timestamp']);
+      uniqueDates.add(DateTime(dt.year, dt.month, dt.day));
+    }
+
+    List<DateTime> sortedDates = uniqueDates.toList();
+    sortedDates.sort((a, b) => b.compareTo(a)); // newest first
+
+    int streak = 0;
+    DateTime today = DateTime.now();
+    DateTime checkDate = DateTime(today.year, today.month, today.day);
+
+    for (var date in sortedDates) {
+      if (date.isAtSameMomentAs(checkDate)) {
+        streak++;
+        checkDate = checkDate.subtract(const Duration(days: 1));
+      } else if (date.isBefore(checkDate)) {
+        // If the date is older than the day we're checking, and it's not the next in sequence, break
+        break;
+      } else {
+        // date is after checkDate (shouldn't happen because sorted desc), skip
+        continue;
+      }
+    }
+
+    return streak;
   }
 }
