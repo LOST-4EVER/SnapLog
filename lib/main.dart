@@ -44,7 +44,6 @@ class SnapLogApp extends StatelessWidget {
     return baseTheme.copyWith(
       textTheme: GoogleFonts.plusJakartaSansTextTheme(baseTheme.textTheme),
       
-      // Custom Navigation Bar Theme based on the image provided
       navigationBarTheme: NavigationBarThemeData(
         height: 80,
         elevation: 0,
@@ -157,7 +156,7 @@ class _MainNavigationState extends State<MainNavigation> {
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, -2),
             ),

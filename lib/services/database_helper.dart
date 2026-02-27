@@ -64,6 +64,25 @@ class DatabaseHelper {
     return await db.insert('photo_entries', entry.toMap());
   }
 
+  Future<int> updateEntry(PhotoEntry entry) async {
+    Database db = await database;
+    return await db.update(
+      'photo_entries',
+      entry.toMap(),
+      where: 'id = ?',
+      whereArgs: [entry.id],
+    );
+  }
+
+  Future<int> deleteEntry(int id) async {
+    Database db = await database;
+    return await db.delete(
+      'photo_entries',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
   Future<List<PhotoEntry>> getEntries() async {
     Database db = await database;
     List<Map<String, dynamic>> maps = await db.query('photo_entries', orderBy: 'timestamp DESC');
@@ -74,7 +93,6 @@ class DatabaseHelper {
     try {
       Database db = await database;
       await db.delete('photo_entries');
-      // Also clear the database settings if needed
       await db.delete('app_settings');
     } catch (e) {
       debugPrint('Error clearing all data: $e');
@@ -97,15 +115,13 @@ class DatabaseHelper {
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
-  // Get entries from this day in previous years
   Future<List<PhotoEntry>> getOnThisDayEntries() async {
     Database db = await database;
     final now = DateTime.now();
     final month = now.month.toString().padLeft(2, '0');
     final day = now.day.toString().padLeft(2, '0');
-    final todayStr = "-$month-${day}T"; // Searching for -MM-DDT in ISO string
+    final todayStr = "-$month-${day}T";
 
-    // Query for entries where month and day match but year is different
     final List<Map<String, dynamic>> maps = await db.rawQuery(
       "SELECT * FROM photo_entries WHERE timestamp LIKE ? AND timestamp NOT LIKE ?",
       ['%$todayStr%', '${now.year}$todayStr%']
@@ -114,7 +130,6 @@ class DatabaseHelper {
     return List.generate(maps.length, (i) => PhotoEntry.fromMap(maps[i]));
   }
 
-  // Calculate the current daily streak
   Future<int> calculateStreak() async {
     Database db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
@@ -125,7 +140,6 @@ class DatabaseHelper {
 
     if (maps.isEmpty) return 0;
 
-    // Convert to a set of date-only values
     Set<DateTime> uniqueDates = {};
     for (var row in maps) {
       DateTime dt = DateTime.parse(row['timestamp']);
@@ -133,7 +147,7 @@ class DatabaseHelper {
     }
 
     List<DateTime> sortedDates = uniqueDates.toList();
-    sortedDates.sort((a, b) => b.compareTo(a)); // newest first
+    sortedDates.sort((a, b) => b.compareTo(a));
 
     int streak = 0;
     DateTime today = DateTime.now();
@@ -144,10 +158,8 @@ class DatabaseHelper {
         streak++;
         checkDate = checkDate.subtract(const Duration(days: 1));
       } else if (date.isBefore(checkDate)) {
-        // If the date is older than the day we're checking, and it's not the next in sequence, break
         break;
       } else {
-        // date is after checkDate (shouldn't happen because sorted desc), skip
         continue;
       }
     }

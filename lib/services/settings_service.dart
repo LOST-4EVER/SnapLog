@@ -37,6 +37,11 @@ class SettingsService {
     await _prefs.setString('imageQuality', quality);
   }
 
+  Future<void> setDefaultFilter(String filter) async {
+    await _ensureInitialized();
+    await _prefs.setString('defaultFilter', filter);
+  }
+
   Future<void> clearCache() async {
     try {
       final cacheDir = await getTemporaryDirectory();

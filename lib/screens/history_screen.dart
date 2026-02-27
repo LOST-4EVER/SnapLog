@@ -1,9 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/photo_entry.dart';
 import '../services/database_helper.dart';
 import '../services/entries_notifier.dart';
+import 'quiz_screen.dart';
 
 enum ViewMode { day, month, year }
 
@@ -114,7 +116,6 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
   }
 
   Widget _buildEmptyState() {
-    // Empty state UI remains the same
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -137,7 +138,7 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
           itemCount: entries.length,
           itemBuilder: (context, index) => Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: _EntryCard(entry: entries[index]),
+            child: _EntryCard(entry: entries[index], onRefresh: _refreshEntries),
           ),
         );
       case ViewMode.month:
@@ -146,7 +147,7 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
           sliver: SliverGrid.builder(
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, crossAxisSpacing: 8, mainAxisSpacing: 8),
             itemCount: entries.length,
-            itemBuilder: (context, index) => _GridItem(entry: entries[index]),
+            itemBuilder: (context, index) => _GridItem(entry: entries[index], onRefresh: _refreshEntries),
           ),
         );
       case ViewMode.year:
@@ -155,14 +156,13 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
           sliver: SliverGrid.builder(
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 5, crossAxisSpacing: 4, mainAxisSpacing: 4),
             itemCount: entries.length,
-            itemBuilder: (context, index) => _GridItem(entry: entries[index], showDetails: false),
+            itemBuilder: (context, index) => _GridItem(entry: entries[index], showDetails: false, onRefresh: _refreshEntries),
           ),
         );
     }
   }
 }
 
-// Card for "On This Day" feature
 class _OnThisDayCard extends StatelessWidget {
   final List<PhotoEntry> entries;
   const _OnThisDayCard({required this.entries});
@@ -176,7 +176,7 @@ class _OnThisDayCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(32),
         gradient: LinearGradient(
-          colors: [colorScheme.primaryContainer.withValues(alpha: 0.5), colorScheme.surfaceContainerHighest.withValues(alpha: 0.2)],
+          colors: [colorScheme.primaryContainer.withOpacity(0.5), colorScheme.surfaceVariant.withOpacity(0.2)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -208,7 +208,7 @@ class _OnThisDayCard extends StatelessWidget {
                   aspectRatio: 1,
                   child: Stack(
                     children: [
-                      _GridItem(entry: entry),
+                      _GridItem(entry: entry, onRefresh: () {}),
                       Positioned(
                         top: 6,
                         left: 6,
@@ -236,10 +236,10 @@ class _OnThisDayCard extends StatelessWidget {
   }
 }
 
-// _EntryCard, _GridItem, and _EntryDetailModal remain largely the same, but with rounded corners increased
 class _EntryCard extends StatelessWidget {
   final PhotoEntry entry;
-  const _EntryCard({required this.entry});
+  final VoidCallback onRefresh;
+  const _EntryCard({required this.entry, required this.onRefresh});
 
   @override
   Widget build(BuildContext context) {
@@ -279,19 +279,20 @@ class _EntryCard extends StatelessWidget {
   }
 
   void _showDetails(BuildContext context) {
-    showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (context) => _EntryDetailModal(entry: entry));
+    showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (context) => _EntryDetailModal(entry: entry, onRefresh: onRefresh));
   }
 }
 
 class _GridItem extends StatelessWidget {
   final PhotoEntry entry;
   final bool showDetails;
-  const _GridItem({required this.entry, this.showDetails = true});
+  final VoidCallback onRefresh;
+  const _GridItem({required this.entry, this.showDetails = true, required this.onRefresh});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (context) => _EntryDetailModal(entry: entry)),
+      onTap: () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (context) => _EntryDetailModal(entry: entry, onRefresh: onRefresh)),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
         child: Stack(fit: StackFit.expand, children: [Image.file(File(entry.imagePath), fit: BoxFit.cover), if (showDetails) Positioned(bottom: 4, right: 4, child: Text(entry.mood, style: const TextStyle(fontSize: 16)))]),
@@ -300,12 +301,79 @@ class _GridItem extends StatelessWidget {
   }
 }
 
-class _EntryDetailModal extends StatelessWidget {
+class _EntryDetailModal extends StatefulWidget {
   final PhotoEntry entry;
-  const _EntryDetailModal({required this.entry});
+  final VoidCallback onRefresh;
+  const _EntryDetailModal({required this.entry, required this.onRefresh});
+
+  @override
+  State<_EntryDetailModal> createState() => _EntryDetailModalState();
+}
+
+class _EntryDetailModalState extends State<_EntryDetailModal> {
+  late TextEditingController _captionController;
+  bool _isEditing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _captionController = TextEditingController(text: widget.entry.caption);
+  }
+
+  @override
+  void dispose() {
+    _captionController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _sharePhoto() async {
+    await Share.shareXFiles([XFile(widget.entry.imagePath)], text: widget.entry.caption.isNotEmpty ? widget.entry.caption : "Check out my SnapLog!");
+  }
+
+  Future<void> _deletePhoto(BuildContext context) async {
+    final bool? passedQuiz = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const QuizScreen(difficulty: QuizDifficulty.hard)),
+    );
+
+    if (passedQuiz == true) {
+      if (widget.entry.id != null) {
+        await DatabaseHelper().deleteEntry(widget.entry.id!);
+        final file = File(widget.entry.imagePath);
+        if (await file.exists()) {
+          await file.delete();
+        }
+        if (mounted) {
+          Navigator.pop(context); // Close modal
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Entry deleted permanently.")));
+          widget.onRefresh();
+        }
+      }
+    }
+  }
+
+  Future<void> _saveCaption() async {
+    final updatedEntry = PhotoEntry(
+      id: widget.entry.id,
+      imagePath: widget.entry.imagePath,
+      caption: _captionController.text,
+      mood: widget.entry.mood,
+      filter: widget.entry.filter,
+      timestamp: widget.entry.timestamp,
+    );
+
+    await DatabaseHelper().updateEntry(updatedEntry);
+    setState(() => _isEditing = false);
+    widget.onRefresh();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Caption updated.")));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return DraggableScrollableSheet(
       initialChildSize: 0.9,
       maxChildSize: 0.9,
@@ -318,15 +386,81 @@ class _EntryDetailModal extends StatelessWidget {
           children: [
             Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Theme.of(context).colorScheme.outlineVariant, borderRadius: BorderRadius.circular(2)))),
             const SizedBox(height: 24),
-            ClipRRect(borderRadius: BorderRadius.circular(32), child: Image.file(File(entry.imagePath), fit: BoxFit.cover)),
+            ClipRRect(borderRadius: BorderRadius.circular(32), child: Image.file(File(widget.entry.imagePath), fit: BoxFit.cover)),
             const SizedBox(height: 24),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(entry.mood, style: const TextStyle(fontSize: 48)), Column(crossAxisAlignment: CrossAxisAlignment.end, children: [Text(DateFormat('MMMM dd, yyyy').format(entry.timestamp), style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)), Text(DateFormat('EEEE, hh:mm a').format(entry.timestamp))])]),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween, 
+              children: [
+                Text(widget.entry.mood, style: const TextStyle(fontSize: 48)), 
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end, 
+                  children: [
+                    Text(DateFormat('MMMM dd, yyyy').format(widget.entry.timestamp), style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)), 
+                    Text(DateFormat('EEEE, hh:mm a').format(widget.entry.timestamp))
+                  ]
+                )
+              ]
+            ),
             const Divider(height: 48),
-            Text("Caption", style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary, letterSpacing: 1.1)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text("Caption", style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary, letterSpacing: 1.1)),
+                IconButton(
+                  icon: Icon(_isEditing ? Icons.check : Icons.edit_outlined, size: 20),
+                  onPressed: _isEditing ? _saveCaption : () => setState(() => _isEditing = true),
+                ),
+              ],
+            ),
             const SizedBox(height: 12),
-            Text(entry.caption.isNotEmpty ? entry.caption : "No caption added.", style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.5)),
+            _isEditing 
+              ? TextField(
+                  controller: _captionController,
+                  autofocus: true,
+                  maxLines: null,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                    contentPadding: const EdgeInsets.all(16),
+                  ),
+                )
+              : Text(
+                  _captionController.text.isNotEmpty ? _captionController.text : "No caption added.", 
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.5)
+                ),
             const SizedBox(height: 32),
-            Row(children: [const Icon(Icons.filter_vintage_outlined, size: 16), const SizedBox(width: 8), Text("Applied Filter: ${entry.filter}", style: Theme.of(context).textTheme.bodySmall)])
+            Row(children: [const Icon(Icons.filter_vintage_outlined, size: 16), const SizedBox(width: 8), Text("Applied Filter: ${widget.entry.filter}", style: Theme.of(context).textTheme.bodySmall)]),
+            
+            const SizedBox(height: 40),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _sharePhoto,
+                    icon: const Icon(Icons.share_outlined),
+                    label: const Text("Share"),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: () => _deletePhoto(context),
+                    icon: const Icon(Icons.delete_forever_outlined),
+                    label: const Text("Delete"),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: colorScheme.error,
+                      foregroundColor: colorScheme.onError,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
           ],
         ),
       ),

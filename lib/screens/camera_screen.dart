@@ -16,7 +16,7 @@ class CameraScreen extends StatefulWidget {
   State<CameraScreen> createState() => _CameraScreenState();
 }
 
-class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver {
+class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
   CameraController? _controller;
   Future<void>? _initializeControllerFuture;
   
@@ -28,8 +28,8 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   bool _isCameraInitialized = false;
   bool _isCapturingPhoto = false;
 
-  final ColorFilter _currentFilter = const ColorFilter.mode(Colors.transparent, BlendMode.dst);
-  final String _filterName = "Normal";
+  ColorFilter _currentFilter = const ColorFilter.mode(Colors.transparent, BlendMode.dst);
+  String _filterName = "Normal";
   String? _lastCapturedPath;
 
   int _todaysPhotoCount = 0;
@@ -38,14 +38,45 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   late final EntriesNotifier _notifier;
   late final VoidCallback _notifierListener;
 
+  final Map<String, ColorFilter> _filters = {
+    "Normal": const ColorFilter.mode(Colors.transparent, BlendMode.dst),
+    "B&W": const ColorFilter.matrix([
+      0.2126, 0.7152, 0.0722, 0, 0,
+      0.2126, 0.7152, 0.0722, 0, 0,
+      0.2126, 0.7152, 0.0722, 0, 0,
+      0,      0,      0,      1, 0,
+    ]),
+    "Sepia": const ColorFilter.matrix([
+      0.393, 0.769, 0.189, 0, 0,
+      0.349, 0.686, 0.168, 0, 0,
+      0.272, 0.534, 0.131, 0, 0,
+      0,     0,     0,     1, 0,
+    ]),
+    "Cool": const ColorFilter.matrix([
+      1, 0, 0, 0, 0,
+      0, 1, 0, 0, 0,
+      0, 0, 1.2, 0, 0,
+      0, 0, 0, 1, 0,
+    ]),
+    "Warm": const ColorFilter.matrix([
+      1.2, 0, 0, 0, 0,
+      0, 1, 0, 0, 0,
+      0, 0, 0.8, 0, 0,
+      0, 0, 0, 1, 0,
+    ]),
+  };
+
+  @override
+  bool get wantKeepAlive => true;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _notifier = EntriesNotifier();
+    _notifierListener = () => _loadData();
+    _notifier.addListener(_notifierListener);
     _loadData().then((_) {
-      _notifier = EntriesNotifier();
-      _notifierListener = () => _loadData();
-      _notifier.addListener(_notifierListener);
       _initializeCamera(widget.cameras[_selectedCameraIndex]);
     });
    }
@@ -71,7 +102,6 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
   Future<void> _initializeCamera(CameraDescription cameraDescription) async {
     ResolutionPreset preset;
-    // Optimized resolution presets for better frame rate
     switch (_imageQuality) {
       case 'Low': preset = ResolutionPreset.medium; break;
       case 'Medium': preset = ResolutionPreset.high; break;
@@ -110,6 +140,8 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
         _todaysPhotoCount = count;
         _dailyLimit = settings['dailyLimit'] ?? 3;
         _imageQuality = settings['imageQuality'] ?? 'High';
+        _filterName = settings['defaultFilter'] ?? 'Normal';
+        _currentFilter = _filters[_filterName]!;
       });
     }
   }
@@ -179,7 +211,6 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   Future<void> _deleteLastPhoto() async {
     if (_lastCapturedPath == null) return;
     
-    // Unified Quiz for deletion
     final bool? passedQuiz = await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const QuizScreen()),
@@ -205,6 +236,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     if (widget.cameras.isEmpty) {
       return const Scaffold(body: Center(child: Text("No cameras detected")));
     }
@@ -217,7 +249,6 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Viewfinder Container - Optimized with RepaintBoundary
           Positioned(
             top: size.height * 0.08,
             bottom: size.height * 0.18,
@@ -226,31 +257,23 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
             child: RepaintBoundary(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(32),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    _isCameraInitialized && _controller != null
-                        ? CameraPreview(_controller!)
-                        : const Center(child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)),
-                    
-                    if (_filterName != "Normal")
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          child: ColorFiltered(
-                            colorFilter: _currentFilter,
-                            child: Container(color: Colors.transparent),
-                          ),
-                        ),
-                      ),
-                    
-                    CustomPaint(painter: ViewfinderCornersPainter()),
-                  ],
+                child: ColorFiltered(
+                  colorFilter: _currentFilter,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      _isCameraInitialized && _controller != null
+                          ? CameraPreview(_controller!)
+                          : const Center(child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)),
+                      
+                      CustomPaint(painter: ViewfinderCornersPainter()),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
 
-          // Top Bar
           Positioned(
             top: 0,
             left: 0,
@@ -284,14 +307,13 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                         ],
                       ),
                     ),
-                    const SizedBox(width: 48), // Spacer for balance
+                    const SizedBox(width: 48), 
                   ],
                 ),
               ),
             ),
           ),
 
-          // Bottom Controls
           Positioned(
             bottom: 0,
             left: 0,
@@ -302,7 +324,6 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Thumbnail / Delete
                     GestureDetector(
                       onLongPress: _deleteLastPhoto,
                       child: _BottomSideButton(
@@ -325,7 +346,6 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                       ),
                     ),
 
-                    // Capture Button
                     GestureDetector(
                       onTap: _takePicture,
                       child: Container(
@@ -352,7 +372,6 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                       ),
                     ),
 
-                    // Flip Camera
                     _BottomSideButton(
                       child: Icon(Icons.flip_camera_ios_outlined, color: Colors.white.withOpacity(0.9), size: 26),
                       onPressed: _toggleCamera,

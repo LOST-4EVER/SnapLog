@@ -2,8 +2,11 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+enum QuizDifficulty { normal, hard }
+
 class QuizScreen extends StatefulWidget {
-  const QuizScreen({super.key});
+  final QuizDifficulty difficulty;
+  const QuizScreen({super.key, this.difficulty = QuizDifficulty.normal});
 
   @override
   State<QuizScreen> createState() => _QuizScreenState();
@@ -12,6 +15,9 @@ class QuizScreen extends StatefulWidget {
 class _QuizScreenState extends State<QuizScreen> {
   late int _num1;
   late int _num2;
+  late int _num3;
+  late String _operation1;
+  late String _operation2;
   late int _correctAnswer;
   late List<int> _options;
   bool _isAnswered = false;
@@ -25,14 +31,48 @@ class _QuizScreenState extends State<QuizScreen> {
 
   void _generateQuiz() {
     final random = Random();
-    _num1 = random.nextInt(12) + 1;
-    _num2 = random.nextInt(12) + 1;
-    _correctAnswer = _num1 + _num2;
+    if (widget.difficulty == QuizDifficulty.hard) {
+      // Hard mode: three numbers and mixed operations
+      _num1 = random.nextInt(20) + 10;
+      _num2 = random.nextInt(15) + 5;
+      _num3 = random.nextInt(10) + 2;
+      
+      final op1 = random.nextInt(2); // 0: +, 1: *
+      final op2 = random.nextInt(2); // 0: -, 1: +
+      
+      if (op1 == 0) {
+        _operation1 = "+";
+        if (op2 == 0) {
+          _operation2 = "-";
+          _correctAnswer = _num1 + _num2 - _num3;
+        } else {
+          _operation2 = "+";
+          _correctAnswer = _num1 + _num2 + _num3;
+        }
+      } else {
+        _operation1 = "×";
+        if (op2 == 0) {
+          _operation2 = "-";
+          _correctAnswer = (_num1 * _num2) - _num3;
+        } else {
+          _operation2 = "+";
+          _correctAnswer = (_num1 * _num2) + _num3;
+        }
+      }
+    } else {
+      // Normal mode: two numbers addition
+      _num1 = random.nextInt(12) + 1;
+      _num2 = random.nextInt(12) + 1;
+      _operation1 = "+";
+      _operation2 = "";
+      _correctAnswer = _num1 + _num2;
+    }
 
     _options = [_correctAnswer];
     while (_options.length < 4) {
-      int wrongAnswer = _correctAnswer + (random.nextBool() ? 1 : -1) * (random.nextInt(5) + 1);
-      if (wrongAnswer > 0 && !_options.contains(wrongAnswer)) {
+      int offset = (random.nextBool() ? 1 : -1) * (random.nextInt(10) + 1);
+      int wrongAnswer = _correctAnswer + offset;
+      if (wrongAnswer != _correctAnswer && !_options.contains(wrongAnswer)) {
         _options.add(wrongAnswer);
       }
     }
@@ -69,6 +109,7 @@ class _QuizScreenState extends State<QuizScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isHard = widget.difficulty == QuizDifficulty.hard;
 
     return Scaffold(
       appBar: AppBar(
@@ -89,14 +130,18 @@ class _QuizScreenState extends State<QuizScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer.withOpacity(0.2),
+                  color: (isHard ? Colors.red : colorScheme.primary).withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.psychology_outlined, size: 48, color: colorScheme.primary),
+                child: Icon(
+                  isHard ? Icons.lock_outline : Icons.psychology_outlined, 
+                  size: 48, 
+                  color: isHard ? Colors.red : colorScheme.primary
+                ),
               ),
               const SizedBox(height: 24),
               Text(
-                "Security Check",
+                isHard ? "Critical Verification" : "Security Check",
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: colorScheme.onSurface,
@@ -104,18 +149,22 @@ class _QuizScreenState extends State<QuizScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                "Prove you're human to continue",
+                isHard 
+                  ? "Solve this complex equation to proceed with deletion." 
+                  : "Prove you're human to continue",
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: 48),
-              Text(
-                "$_num1 + $_num2",
-                style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: colorScheme.primary,
+              FittedBox(
+                child: Text(
+                  isHard ? "($_num1 $_operation1 $_num2) $_operation2 $_num3" : "$_num1 + $_num2",
+                  style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: isHard ? Colors.red : colorScheme.primary,
+                  ),
                 ),
               ),
               const SizedBox(height: 48),

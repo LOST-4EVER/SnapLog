@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import '../models/photo_entry.dart';
 import '../services/database_helper.dart';
 import '../services/entries_notifier.dart';
@@ -32,12 +33,18 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
     setState(() => _isSaving = true);
 
     try {
-      // 1. Move image to permanent storage
+      // 1. Compress and Move image to permanent storage
       final directory = await getApplicationDocumentsDirectory();
-      final fileName = path.basename(widget.imagePath);
+      final fileName = "img_${DateTime.now().millisecondsSinceEpoch}.jpg";
       final permanentPath = path.join(directory.path, fileName);
       
-      await File(widget.imagePath).copy(permanentPath);
+      // Professional Image Compression to reduce file size significantly
+      await FlutterImageCompress.compressAndGetFile(
+        widget.imagePath,
+        permanentPath,
+        quality: 85, // Balanced quality/size ratio
+        format: CompressFormat.jpeg,
+      );
 
       // 2. Create and save entry
       final entry = PhotoEntry(
@@ -53,8 +60,14 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
       EntriesNotifier().notifyEntryAdded();
 
       HapticFeedback.heavyImpact();
-      if (!mounted) return;
       
+      // Cleanup temporary camera file
+      final tempFile = File(widget.imagePath);
+      if (await tempFile.exists()) {
+        await tempFile.delete();
+      }
+
+      if (!mounted) return;
       Navigator.of(context).popUntil((route) => route.isFirst);
     } catch (e) {
       if (mounted) {
@@ -70,6 +83,7 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final size = MediaQuery.of(context).size;
 
     return Scaffold(
       appBar: AppBar(
@@ -88,7 +102,7 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
                   borderRadius: BorderRadius.circular(24),
                   child: Image.file(
                     File(widget.imagePath),
-                    height: 400,
+                    height: size.height * 0.45, // Responsive height
                     width: double.infinity,
                     fit: BoxFit.cover,
                   ),
@@ -97,7 +111,7 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
             ),
             
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -115,16 +129,16 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
                       filled: true,
                       fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(20),
                         borderSide: BorderSide.none,
                       ),
                       prefixIcon: const Icon(Icons.notes),
                     ),
-                    maxLines: 4,
+                    maxLines: 3,
                     textCapitalization: TextCapitalization.sentences,
                   ),
                   
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
                   
                   Text(
                     "Select your mood",
@@ -134,32 +148,35 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
                   ),
                   const SizedBox(height: 16),
                   SizedBox(
-                    height: 70,
+                    height: 75,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       itemCount: _moods.length,
                       itemBuilder: (context, index) {
                         final mood = _moods[index];
                         final isSelected = _selectedMood == mood;
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() => _selectedMood = mood);
-                            HapticFeedback.selectionClick();
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            margin: const EdgeInsets.only(right: 12),
-                            width: 60,
-                            decoration: BoxDecoration(
-                              color: isSelected ? colorScheme.primaryContainer : colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: isSelected ? colorScheme.primary : Colors.transparent,
-                                width: 2,
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: InkWell(
+                            onTap: () {
+                              setState(() => _selectedMood = mood);
+                              HapticFeedback.selectionClick();
+                            },
+                            borderRadius: BorderRadius.circular(20),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              width: 65,
+                              decoration: BoxDecoration(
+                                color: isSelected ? colorScheme.primaryContainer : colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: isSelected ? colorScheme.primary : Colors.transparent,
+                                  width: 2,
+                                ),
                               ),
-                            ),
-                            child: Center(
-                              child: Text(mood, style: const TextStyle(fontSize: 32)),
+                              child: Center(
+                                child: Text(mood, style: const TextStyle(fontSize: 32)),
+                              ),
                             ),
                           ),
                         );
@@ -167,20 +184,20 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
                     ),
                   ),
                   
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 32),
                   
                   SizedBox(
                     width: double.infinity,
-                    height: 56,
+                    height: 60,
                     child: FilledButton.icon(
                       onPressed: _isSaving ? null : _saveEntry,
                       icon: _isSaving 
                           ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Icon(Icons.check),
-                      label: Text(_isSaving ? "Saving..." : "Complete Entry"),
+                          : const Icon(Icons.check_circle_outline),
+                      label: Text(_isSaving ? "Optimizing & Saving..." : "Complete Entry"),
                       style: FilledButton.styleFrom(
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(20),
                         ),
                       ),
                     ),

@@ -1,11 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import 'entry_detail_screen.dart';
 import 'quiz_screen.dart';
 import '../services/settings_service.dart';
 
-// Helper to convert filter name to ColorFilter (kept small set matched to CameraScreen)
 ColorFilter _filterForName(String name) {
   switch (name) {
     case 'B&W':
@@ -75,18 +75,21 @@ class _PreviewScreenState extends State<PreviewScreen> {
   }
 
   Future<void> _handleRetry() async {
-    // If daily limit is 1, show the quiz before allowing retry.
     if (_dailyLimit == 1) {
       final bool? passedQuiz = await Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const QuizScreen()),
       );
       if (passedQuiz == true && mounted) {
-        Navigator.of(context).pop(); // Passed quiz, allow retry
+        Navigator.of(context).pop();
       }
     } else {
-      Navigator.of(context).pop(); // No limit, allow retry
+      Navigator.of(context).pop();
     }
+  }
+
+  Future<void> _shareImage() async {
+    await Share.shareXFiles([XFile(widget.imagePath)], text: 'Check out my SnapLog!');
   }
 
   @override
@@ -96,28 +99,56 @@ class _PreviewScreenState extends State<PreviewScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
+          // The photo preview is already full screen (Image.file with fit: BoxFit.cover)
           ColorFiltered(
             colorFilter: _filterForName(widget.filterName),
             child: Image.file(File(widget.imagePath), fit: BoxFit.cover),
           ),
+          
+          // Top Bar for Share
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.share, color: Colors.white, size: 28),
+                      onPressed: _shareImage,
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.black38,
+                        shape: const CircleBorder(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Bottom Controls
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
             child: Container(
               padding: const EdgeInsets.fromLTRB(24, 24, 24, 48),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
-                  colors: [Colors.black, Colors.transparent],
+                  colors: [Colors.black.withOpacity(0.8), Colors.transparent],
                 ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   SizedBox(
-                    height: 60,
+                    height: 56,
                     child: OutlinedButton.icon(
                       onPressed: _handleRetry,
                       icon: const Icon(Icons.replay_outlined),
@@ -125,14 +156,14 @@ class _PreviewScreenState extends State<PreviewScreen> {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white,
                         side: const BorderSide(color: Colors.white54),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
                       ),
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: SizedBox(
-                      height: 60,
+                      height: 56,
                       child: FilledButton.icon(
                         onPressed: () {
                           HapticFeedback.lightImpact();
@@ -144,9 +175,9 @@ class _PreviewScreenState extends State<PreviewScreen> {
                           ));
                         },
                         icon: const Icon(Icons.check_circle_outline),
-                        label: const Text("Use this Photo"),
+                        label: const Text("Use Photo"),
                         style: FilledButton.styleFrom(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
                         ),
                       ),
                     ),
