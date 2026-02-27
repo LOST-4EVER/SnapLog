@@ -20,9 +20,6 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   CameraController? _controller;
   Future<void>? _initializeControllerFuture;
   
-  double _currentZoom = 1.0;
-  double _maxZoom = 1.0;
-  double _minZoom = 1.0;
   FlashMode _flashMode = FlashMode.off;
   int _selectedCameraIndex = 0;
   bool _isCameraInitialized = false;
@@ -118,8 +115,6 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     try {
       _initializeControllerFuture = controller.initialize();
       await _initializeControllerFuture;
-      _maxZoom = await controller.getMaxZoomLevel();
-      _minZoom = await controller.getMinZoomLevel();
       await controller.setFlashMode(_flashMode);
       if (mounted) {
         setState(() {
@@ -162,7 +157,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       case FlashMode.off: nextMode = FlashMode.auto; break;
       case FlashMode.auto: nextMode = FlashMode.always; break;
       case FlashMode.always: nextMode = FlashMode.torch; break;
-      case FlashMode.torch: default: nextMode = FlashMode.off; break;
+      case FlashMode.torch: nextMode = FlashMode.off; break;
     }
     try {
       await _controller!.setFlashMode(nextMode);
@@ -292,7 +287,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.4),
+                        color: Colors.black.withValues(alpha: 0.4),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: Colors.white10),
                       ),
@@ -327,22 +322,22 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                     GestureDetector(
                       onLongPress: _deleteLastPhoto,
                       child: _BottomSideButton(
+                        onPressed: () {},
                         child: _lastCapturedPath != null
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(10),
-                                child: Image.file(io.File(_lastCapturedPath!), width: 44, height: 44, fit: BoxFit.cover),
+                                child: io.Image.file(io.File(_lastCapturedPath!), width: 44, height: 44, fit: BoxFit.cover),
                               )
                             : Container(
                                 width: 44,
                                 height: 44,
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.1),
+                                  color: Colors.white.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(color: Colors.white10),
                                 ),
                                 child: const Icon(Icons.image_outlined, color: Colors.white70, size: 20),
                               ),
-                        onPressed: () {},
                       ),
                     ),
 
@@ -373,8 +368,8 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                     ),
 
                     _BottomSideButton(
-                      child: Icon(Icons.flip_camera_ios_outlined, color: Colors.white.withOpacity(0.9), size: 26),
                       onPressed: _toggleCamera,
+                      child: Icon(Icons.flip_camera_ios_outlined, color: Colors.white.withValues(alpha: 0.9), size: 26),
                     ),
                   ],
                 ),
@@ -399,7 +394,7 @@ class _TopIconButton extends StatelessWidget {
       icon: Icon(icon, color: color, size: 22),
       onPressed: onPressed,
       style: IconButton.styleFrom(
-        backgroundColor: Colors.white.withOpacity(0.1),
+        backgroundColor: Colors.white.withValues(alpha: 0.1),
         shape: const CircleBorder(),
       ),
     );
@@ -428,7 +423,7 @@ class ViewfinderCornersPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.5)
+      ..color = Colors.white.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round;
