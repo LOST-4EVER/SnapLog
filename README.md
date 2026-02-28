@@ -42,4 +42,4 @@ lib/
 ---
 
 **Developed by LOST FOREVER ❤️ with Ai**  
-*v1.0.0 - The Feature-Complete Edition*
+*v1.0.1 - The Pro Edition*

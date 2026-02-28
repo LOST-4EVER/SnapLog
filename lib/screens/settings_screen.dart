@@ -430,7 +430,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       children: [
                         const Text("SnapLog Pro", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 1)),
                         const SizedBox(height: 4),
-                        const Text("Version 1.0.0", style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
+                        const Text("Version 1.0.1", style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 24),
                         const Text("Developed by LOST-4EVER", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900)),
                         const Row(
