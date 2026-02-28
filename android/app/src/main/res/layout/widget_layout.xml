@@ -1,18 +1,62 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/launch_background"
-    android:orientation="vertical"
-    android:padding="8dp"
-    android:gravity="center">
+    android:background="@drawable/widget_background"
+    android:padding="12dp">
 
-    <TextView
-        android:id="@+id/appwidget_text"
+    <LinearLayout
+        android:id="@+id/streak_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="0 Streak"
-        android:textSize="14sp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_streak_flame"
+            android:contentDescription="Streak" />
+
+        <TextView
+            android:id="@+id/appwidget_streak_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:text="0"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF" />
+            
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="2dp"
+            android:text="DAYS"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:textColor="#80FFFFFF" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/appwidget_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/streak_container"
+        android:layout_marginTop="4dp"
+        android:text="SNAP NEEDED"
+        android:textSize="11sp"
         android:textStyle="bold"
-        android:textColor="#FFFFFF" />
-</LinearLayout>
+        android:textColor="#FF5252"
+        android:letterSpacing="0.1" />
+
+    <TextView
+        android:id="@+id/appwidget_last_snap"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:text="Last snap: --"
+        android:textSize="9sp"
+        android:textColor="#60FFFFFF" />
+
+</RelativeLayout>

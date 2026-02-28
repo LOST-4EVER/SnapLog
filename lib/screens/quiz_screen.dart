@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/settings_service.dart';
@@ -25,11 +26,41 @@ class _QuizScreenState extends State<QuizScreen> {
   int? _selectedOption;
   bool _hapticEnabled = true;
 
+  double _timeLeft = 1.0;
+  Timer? _timer;
+
   @override
   void initState() {
     super.initState();
     _generateQuiz();
     _loadSettings();
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    int durationSeconds = 15;
+    if (widget.difficulty == QuizDifficulty.medium) durationSeconds = 12;
+    if (widget.difficulty == QuizDifficulty.hard) durationSeconds = 8;
+
+    _timeLeft = 1.0;
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      if (mounted) {
+        setState(() {
+          _timeLeft -= 0.1 / durationSeconds;
+          if (_timeLeft <= 0) {
+            _timer?.cancel();
+            Navigator.pop(context, false);
+          }
+        });
+      }
+    });
   }
 
   Future<void> _loadSettings() async {
@@ -44,56 +75,53 @@ class _QuizScreenState extends State<QuizScreen> {
   void _generateQuiz() {
     final random = Random();
     if (widget.difficulty == QuizDifficulty.hard) {
-      _num1 = random.nextInt(20) + 10;
-      _num2 = random.nextInt(15) + 5;
-      _num3 = random.nextInt(10) + 2;
+      // Harder: three numbers, multi-operation
+      _num1 = random.nextInt(30) + 20;
+      _num2 = random.nextInt(20) + 10;
+      _num3 = random.nextInt(15) + 5;
       
-      final op1 = random.nextInt(2); 
-      final op2 = random.nextInt(2); 
-      
-      if (op1 == 0) {
+      final type = random.nextInt(3);
+      if (type == 0) {
         _operation1 = "+";
-        if (op2 == 0) {
-          _operation2 = "-";
-          _correctAnswer = _num1 + _num2 - _num3;
-        } else {
-          _operation2 = "+";
-          _correctAnswer = _num1 + _num2 + _num3;
-        }
+        _operation2 = "-";
+        _correctAnswer = _num1 + _num2 - _num3;
+      } else if (type == 1) {
+        _operation1 = "-";
+        _operation2 = "+";
+        _correctAnswer = (_num1 - _num2) + _num3;
       } else {
+        // Multiplication focused
+        _num1 = random.nextInt(12) + 5;
+        _num2 = random.nextInt(8) + 3;
+        _num3 = random.nextInt(20) + 5;
         _operation1 = "×";
-        if (op2 == 0) {
-          _operation2 = "-";
-          _correctAnswer = (_num1 * _num2) - _num3;
-        } else {
-          _operation2 = "+";
-          _correctAnswer = (_num1 * _num2) + _num3;
-        }
+        _operation2 = "+";
+        _correctAnswer = (_num1 * _num2) + _num3;
       }
     } else if (widget.difficulty == QuizDifficulty.medium) {
       final mode = random.nextInt(3);
       if (mode == 0) {
-        _num1 = random.nextInt(50) + 20;
-        _num2 = random.nextInt(50) + 20;
+        _num1 = random.nextInt(100) + 50;
+        _num2 = random.nextInt(100) + 50;
         _operation1 = "+";
         _operation2 = "";
         _correctAnswer = _num1 + _num2;
       } else if (mode == 1) {
-        _num1 = random.nextInt(50) + 30;
-        _num2 = random.nextInt(25) + 5;
+        _num1 = random.nextInt(100) + 50;
+        _num2 = random.nextInt(50) + 10;
         _operation1 = "-";
         _operation2 = "";
         _correctAnswer = _num1 - _num2;
       } else {
-        _num1 = random.nextInt(10) + 3;
-        _num2 = random.nextInt(10) + 3;
+        _num1 = random.nextInt(15) + 5;
+        _num2 = random.nextInt(12) + 4;
         _operation1 = "×";
         _operation2 = "";
         _correctAnswer = _num1 * _num2;
       }
     } else {
-      _num1 = random.nextInt(12) + 1;
-      _num2 = random.nextInt(12) + 1;
+      _num1 = random.nextInt(20) + 5;
+      _num2 = random.nextInt(20) + 5;
       _operation1 = "+";
       _operation2 = "";
       _correctAnswer = _num1 + _num2;
@@ -101,7 +129,7 @@ class _QuizScreenState extends State<QuizScreen> {
 
     _options = [_correctAnswer];
     while (_options.length < 4) {
-      int offset = (random.nextBool() ? 1 : -1) * (random.nextInt(10) + 1);
+      int offset = (random.nextBool() ? 1 : -1) * (random.nextInt(15) + 1);
       int wrongAnswer = _correctAnswer + offset;
       if (wrongAnswer != _correctAnswer && !_options.contains(wrongAnswer)) {
         _options.add(wrongAnswer);
@@ -193,6 +221,18 @@ class _QuizScreenState extends State<QuizScreen> {
                 ),
               ),
               const SizedBox(height: 64),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: LinearProgressIndicator(
+                  value: _timeLeft,
+                  minHeight: 8,
+                  backgroundColor: colorScheme.surfaceContainerHighest,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    _timeLeft < 0.3 ? Colors.red : (isHard ? Colors.red : (isMedium ? Colors.orange : colorScheme.primary)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
               FittedBox(
                 child: Text(
                   isHard ? "($_num1 $_operation1 $_num2) $_operation2 $_num3" : "$_num1 $_operation1 $_num2",

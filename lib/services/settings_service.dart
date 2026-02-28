@@ -21,6 +21,9 @@ class SettingsService {
       'dailyLimit': prefs.getInt('dailyLimit') ?? 3,
       'defaultFilter': prefs.getString('defaultFilter') ?? 'Normal',
       'imageQuality': prefs.getString('imageQuality') ?? 'High',
+      'shutterDelay': prefs.getInt('shutterDelay') ?? 0,
+      'hapticIntensity': prefs.getString('hapticIntensity') ?? 'Medium',
+      'autoSaveToGallery': prefs.getBool('autoSaveToGallery') ?? false,
       'remindersEnabled': prefs.getBool('remindersEnabled') ?? false,
       'reminderTime': prefs.getString('reminderTime') ?? '20:00',
       'useSystemCamera': prefs.getBool('useSystemCamera') ?? false,
@@ -29,6 +32,7 @@ class SettingsService {
       'shutterSound': prefs.getBool('shutterSound') ?? true,
       'biometricLock': prefs.getBool('biometricLock') ?? false,
       'showWidgetOnHome': prefs.getBool('showWidgetOnHome') ?? true,
+      'amoledMode': prefs.getBool('amoledMode') ?? false,
       'shareCount': prefs.getInt('shareCount') ?? 0,
       'editCount': prefs.getInt('editCount') ?? 0,
       'settingsChangeCount': prefs.getInt('settingsChangeCount') ?? 0,
@@ -52,6 +56,30 @@ class SettingsService {
   Future<void> setDefaultFilter(String filter) async {
     final prefs = await _getPrefs;
     await prefs.setString('defaultFilter', filter);
+    await trackEvent('settingsChangeCount');
+  }
+
+  Future<void> setShutterDelay(int seconds) async {
+    final prefs = await _getPrefs;
+    await prefs.setInt('shutterDelay', seconds);
+    await trackEvent('settingsChangeCount');
+  }
+
+  Future<void> setHapticIntensity(String intensity) async {
+    final prefs = await _getPrefs;
+    await prefs.setString('hapticIntensity', intensity);
+    await trackEvent('settingsChangeCount');
+  }
+
+  Future<void> setAutoSaveToGallery(bool enabled) async {
+    final prefs = await _getPrefs;
+    await prefs.setBool('autoSaveToGallery', enabled);
+    await trackEvent('settingsChangeCount');
+  }
+
+  Future<void> setAmoledMode(bool enabled) async {
+    final prefs = await _getPrefs;
+    await prefs.setBool('amoledMode', enabled);
     await trackEvent('settingsChangeCount');
   }
 

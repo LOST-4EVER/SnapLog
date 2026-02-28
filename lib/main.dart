@@ -11,7 +11,6 @@ import 'screens/camera_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/advancements_screen.dart';
-import 'widgets/streak_badge.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,9 +25,32 @@ void main() async {
   runApp(SnapLogApp(cameras: cameras));
 }
 
-class SnapLogApp extends StatelessWidget {
+class SnapLogApp extends StatefulWidget {
   final List<CameraDescription> cameras;
   const SnapLogApp({super.key, required this.cameras});
+
+  @override
+  State<SnapLogApp> createState() => _SnapLogAppState();
+}
+
+class _SnapLogAppState extends State<SnapLogApp> {
+  bool _isAmoled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTheme();
+    EntriesNotifier().addListener(_loadTheme);
+  }
+
+  Future<void> _loadTheme() async {
+    final settings = await SettingsService().getSettings();
+    if (mounted) {
+      setState(() {
+        _isAmoled = settings['amoledMode'] ?? false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +62,7 @@ class SnapLogApp extends StatelessWidget {
     final darkColorScheme = ColorScheme.fromSeed(
       seedColor: const Color(0xFFD0BCFF), 
       brightness: Brightness.dark,
-      surface: const Color(0xFF1C1B1F),
+      surface: _isAmoled ? Colors.black : const Color(0xFF1C1B1F),
     );
 
     return MaterialApp(
@@ -49,7 +71,7 @@ class SnapLogApp extends StatelessWidget {
       theme: _buildTheme(lightColorScheme),
       darkTheme: _buildTheme(darkColorScheme),
       themeMode: ThemeMode.system,
-      home: MainNavigation(cameras: cameras),
+      home: MainNavigation(cameras: widget.cameras),
     );
   }
 
@@ -57,6 +79,7 @@ class SnapLogApp extends StatelessWidget {
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
+      scaffoldBackgroundColor: (colorScheme.brightness == Brightness.dark && _isAmoled) ? Colors.black : null,
       textTheme: GoogleFonts.plusJakartaSansTextTheme().apply(
         bodyColor: colorScheme.onSurface,
         displayColor: colorScheme.onSurface,
@@ -160,9 +183,14 @@ class _MainNavigationState extends State<MainNavigation> {
       );
       if (authenticated) {
         if (mounted) setState(() => _isLocked = false);
+      } else {
+        // Keep locked if authentication fails
+        if (mounted) setState(() => _isLocked = true);
       }
     } catch (e) {
-      if (mounted) setState(() => _isLocked = false);
+      // On error, keep the lock active to ensure security
+      if (mounted) setState(() => _isLocked = true);
+      debugPrint("Biometric auth error: $e");
     }
   }
 
@@ -284,28 +312,8 @@ class _MainNavigationState extends State<MainNavigation> {
           NavigationDestination(icon: Icon(Icons.auto_awesome_motion_outlined), selectedIcon: Icon(Icons.auto_awesome_motion), label: 'Journal'),
           NavigationDestination(icon: Icon(Icons.emoji_events_outlined), selectedIcon: Icon(Icons.emoji_events), label: 'Legacy'),
           NavigationDestination(
-            icon: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(Icons.tune_outlined),
-                Positioned(
-                  top: -8,
-                  right: -12,
-                  child: ScaleTransition(scale: AlwaysStoppedAnimation(0.6), child: StreakBadge()),
-                ),
-              ],
-            ),
-            selectedIcon: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(Icons.tune_rounded),
-                Positioned(
-                  top: -8,
-                  right: -12,
-                  child: ScaleTransition(scale: AlwaysStoppedAnimation(0.6), child: StreakBadge()),
-                ),
-              ],
-            ),
+            icon: Icon(Icons.tune_outlined),
+            selectedIcon: Icon(Icons.tune_rounded),
             label: 'Elite',
           ),
         ],

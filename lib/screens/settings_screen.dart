@@ -24,12 +24,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
   
   int _dailyLimit = 3;
   String _imageQuality = 'High';
+  String _defaultFilter = 'Normal';
+  int _shutterDelay = 0;
+  String _hapticIntensity = 'Medium';
+  bool _autoSaveToGallery = false;
   bool _remindersEnabled = false;
   bool _useSystemCamera = false;
   bool _hapticFeedback = true;
   bool _shutterSound = true;
   bool _biometricLock = false;
   bool _showWidgetOnHome = true;
+  bool _amoledMode = false;
   TimeOfDay _reminderTime = const TimeOfDay(hour: 20, minute: 0);
   
   bool _isLoading = true;
@@ -50,12 +55,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
       setState(() {
         _dailyLimit = settings['dailyLimit'];
         _imageQuality = settings['imageQuality'];
+        _defaultFilter = settings['defaultFilter'] ?? 'Normal';
+        _shutterDelay = settings['shutterDelay'] ?? 0;
+        _hapticIntensity = settings['hapticIntensity'] ?? 'Medium';
+        _autoSaveToGallery = settings['autoSaveToGallery'] ?? false;
         _remindersEnabled = settings['remindersEnabled'];
         _useSystemCamera = settings['useSystemCamera'] ?? false;
         _hapticFeedback = settings['hapticFeedback'] ?? true;
         _shutterSound = settings['shutterSound'] ?? true;
         _biometricLock = settings['biometricLock'] ?? false;
         _showWidgetOnHome = settings['showWidgetOnHome'] ?? true;
+        _amoledMode = settings['amoledMode'] ?? false;
         _reminderTime = TimeOfDay(hour: int.parse(timeParts[0]), minute: int.parse(timeParts[1]));
         _isLoading = false;
       });
@@ -85,7 +95,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _updateHomeWidget() async {
     final streak = await DatabaseHelper().calculateStreak();
+    final countToday = await DatabaseHelper().getTodaysPhotoCount();
+    final entries = await DatabaseHelper().getEntries();
+    String lastTime = "--";
+    if (entries.isNotEmpty) {
+      final last = entries.first;
+      lastTime = "${last.timestamp.hour}:${last.timestamp.minute.toString().padLeft(2, '0')}";
+    }
+
     await HomeWidget.saveWidgetData<int>('streak_count', streak);
+    await HomeWidget.saveWidgetData<bool>('is_today_done', countToday > 0);
+    await HomeWidget.saveWidgetData<String>('last_snap_time', lastTime);
     await HomeWidget.updateWidget(name: 'StreakWidgetProvider');
   }
 
@@ -284,6 +304,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         subtitle: "Current: $_imageQuality",
                         onTap: () => _showQualityPicker(),
                       ),
+                      const Divider(height: 1, indent: 56, endIndent: 16),
+                      _SettingsTile(
+                        icon: Icons.auto_awesome_rounded,
+                        title: "Default Aesthetic",
+                        subtitle: "Filter: $_defaultFilter",
+                        onTap: () => _showFilterPicker(),
+                      ),
+                      const Divider(height: 1, indent: 56, endIndent: 16),
+                      _SettingsTile(
+                        icon: Icons.timer_rounded,
+                        title: "Shutter Delay",
+                        subtitle: _shutterDelay == 0 ? "Instant" : "${_shutterDelay}s delay",
+                        onTap: () => _showDelayPicker(),
+                      ),
+                      const Divider(height: 1, indent: 56, endIndent: 16),
+                      SwitchListTile(
+                        value: _autoSaveToGallery,
+                        onChanged: (v) async {
+                          await _settingsService.setAutoSaveToGallery(v);
+                          if (mounted) setState(() => _autoSaveToGallery = v);
+                          _notifyChange();
+                        },
+                        secondary: Icon(Icons.save_alt_rounded, color: colorScheme.primary),
+                        title: const Text("Archive to Gallery", style: TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: const Text("Auto-save copies to system photos"),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      ),
                     ],
                   ),
                   
@@ -298,20 +345,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         title: const Text("Daily Reminder", style: TextStyle(fontWeight: FontWeight.bold)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       ),
-                      if (_remindersEnabled) ...[
-                        const Divider(height: 1, indent: 56, endIndent: 16),
-                        _SettingsTile(
-                          icon: Icons.schedule_rounded,
-                          title: "Delivery Window",
-                          subtitle: _reminderTime.format(context),
-                          onTap: _selectTime,
-                        ),
-                      ],
+                      const Divider(height: 1, indent: 56, endIndent: 16),
+                      _SettingsTile(
+                        icon: Icons.schedule_rounded,
+                        title: "Delivery Window",
+                        subtitle: _reminderTime.format(context),
+                        onTap: _selectTime,
+                        enabled: _remindersEnabled,
+                      ),
+                      const Divider(height: 1, indent: 56, endIndent: 16),
+                      SwitchListTile(
+                        value: _amoledMode,
+                        onChanged: (v) async {
+                          await _settingsService.setAmoledMode(v);
+                          if (mounted) setState(() => _amoledMode = v);
+                          _notifyChange();
+                        },
+                        secondary: Icon(Icons.dark_mode_rounded, color: colorScheme.primary),
+                        title: const Text("AMOLED Black", style: TextStyle(fontWeight: FontWeight.bold)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      ),
+                      const Divider(height: 1, indent: 56, endIndent: 16),
+                      _SettingsTile(
+                        icon: Icons.vibration_rounded,
+                        title: "Haptic Intensity",
+                        subtitle: "Current: $_hapticIntensity",
+                        onTap: () => _showHapticPicker(),
+                        enabled: _hapticFeedback,
+                      ),
                       const Divider(height: 1, indent: 56, endIndent: 16),
                       SwitchListTile(
                         value: _hapticFeedback,
                         onChanged: _toggleHaptics,
-                        secondary: Icon(Icons.vibration_rounded, color: colorScheme.primary),
+                        secondary: Icon(Icons.touch_app_rounded, color: colorScheme.primary),
                         title: const Text("Tactile Engine", style: TextStyle(fontWeight: FontWeight.bold)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       ),
@@ -416,6 +482,110 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  void _showDelayPicker() async {
+    final options = [0, 2, 5, 10];
+    await showModalBottomSheet<int>(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Text("Shutter Delay", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20)),
+            ),
+            ...options.map((o) => ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 4),
+              title: Text(o == 0 ? "Instant" : "${o}s delay", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              onTap: () {
+                Navigator.pop(context, o);
+                if (o != _shutterDelay) {
+                  _settingsService.setShutterDelay(o);
+                  if (mounted) setState(() => _shutterDelay = o);
+                  _notifyChange();
+                }
+              },
+              trailing: _shutterDelay == o ? Icon(Icons.check_circle_rounded, color: Theme.of(context).colorScheme.primary) : null,
+            )),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showHapticPicker() async {
+    final options = ['Soft', 'Medium', 'Sharp'];
+    await showModalBottomSheet<String>(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Text("Haptic Intensity", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20)),
+            ),
+            ...options.map((o) => ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 4),
+              title: Text(o, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              onTap: () {
+                Navigator.pop(context, o);
+                if (o != _hapticIntensity) {
+                  _settingsService.setHapticIntensity(o);
+                  if (mounted) setState(() => _hapticIntensity = o);
+                  _notifyChange();
+                  if (_hapticFeedback) {
+                    if (o == 'Soft') HapticFeedback.lightImpact();
+                    if (o == 'Medium') HapticFeedback.mediumImpact();
+                    if (o == 'Sharp') HapticFeedback.vibrate();
+                  }
+                }
+              },
+              trailing: _hapticIntensity == o ? Icon(Icons.check_circle_rounded, color: Theme.of(context).colorScheme.primary) : null,
+            )),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showFilterPicker() async {
+    final options = ['Normal', 'B&W', 'Sepia', 'Cool', 'Warm'];
+    await showModalBottomSheet<String>(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Text("Default Filter", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20)),
+            ),
+            ...options.map((o) => ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 4),
+              title: Text(o, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              onTap: () {
+                Navigator.pop(context, o);
+                if (o != _defaultFilter) {
+                  _settingsService.setDefaultFilter(o);
+                  if (mounted) setState(() => _defaultFilter = o);
+                  _notifyChange();
+                }
+              },
+              trailing: _defaultFilter == o ? Icon(Icons.check_circle_rounded, color: Theme.of(context).colorScheme.primary) : null,
+            )),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showQualityPicker() async {
     final options = ['Low', 'Medium', 'High', 'Max (Ultra)'];
     await showModalBottomSheet<String>(
@@ -448,27 +618,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ),
     );
-  }
-
-  Future<void> _resetToDefaults() async {
-    final bool? confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        title: const Text("Reset All Preferences?"),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("CANCEL")),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text("RESET")),
-        ],
-      ),
-    );
-    if (confirm == true) {
-      await _settingsService.resetAllSettings();
-      if (!mounted) return;
-      _loadSettings();
-      _notifyChange();
-      _showRestartDialog();
-    }
   }
 
   Future<void> _clearCache() async {
@@ -545,6 +694,7 @@ class _SettingsTile extends StatelessWidget {
   final Widget? trailing;
   final VoidCallback? onTap;
   final Color? textColor;
+  final bool enabled;
 
   const _SettingsTile({
     required this.icon,
@@ -553,23 +703,25 @@ class _SettingsTile extends StatelessWidget {
     this.trailing,
     this.onTap,
     this.textColor,
+    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      onTap: onTap,
+      onTap: enabled ? onTap : null,
+      enabled: enabled,
       leading: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: enabled ? 0.1 : 0.05),
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 20),
+        child: Icon(icon, color: Theme.of(context).colorScheme.primary.withValues(alpha: enabled ? 1.0 : 0.4), size: 20),
       ),
-      title: Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: textColor, fontSize: 16)),
-      subtitle: subtitle != null ? Text(subtitle!, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.8))) : null,
-      trailing: trailing ?? (onTap != null ? const Icon(Icons.chevron_right_rounded, size: 20) : null),
+      title: Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: textColor?.withValues(alpha: enabled ? 1.0 : 0.4), fontSize: 16)),
+      subtitle: subtitle != null ? Text(subtitle!, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: enabled ? 0.8 : 0.4))) : null,
+      trailing: trailing ?? (onTap != null ? Icon(Icons.chevron_right_rounded, size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: enabled ? 1.0 : 0.4)) : null),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     );
   }

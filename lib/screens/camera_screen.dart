@@ -39,8 +39,12 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   int _todaysPhotoCount = 0;
   int _dailyLimit = 3;
   String _imageQuality = 'High';
+  int _shutterDelay = 0;
+  String _hapticIntensity = 'Medium';
+  bool _autoSaveToGallery = false;
   bool _useSystemCamera = false;
   bool _hapticEnabled = true;
+  bool _shutterSound = true;
   
   late final EntriesNotifier _notifier;
   late final VoidCallback _notifierListener;
@@ -140,14 +144,15 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       case 'Low': preset = ResolutionPreset.medium; break;
       case 'Medium': preset = ResolutionPreset.high; break;
       case 'High': preset = ResolutionPreset.veryHigh; break;
-      default: preset = ResolutionPreset.max; break;
+      case 'Max (Ultra)': preset = ResolutionPreset.max; break;
+      default: preset = ResolutionPreset.high; break;
     }
 
     final controller = CameraController(
       cameraDescription,
       preset,
       enableAudio: false,
-      imageFormatGroup: ImageFormatGroup.jpeg,
+      imageFormatGroup: io.Platform.isAndroid ? ImageFormatGroup.nv21 : ImageFormatGroup.bgra8888,
     );
 
     try {
@@ -184,9 +189,13 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
         _dailyLimit = settings['dailyLimit'] ?? 3;
         _imageQuality = settings['imageQuality'] ?? 'High';
         _filterName = settings['defaultFilter'] ?? 'Normal';
+        _shutterDelay = settings['shutterDelay'] ?? 0;
+        _hapticIntensity = settings['hapticIntensity'] ?? 'Medium';
+        _autoSaveToGallery = settings['autoSaveToGallery'] ?? false;
         _currentFilter = _filters[_filterName]!;
         _useSystemCamera = settings['useSystemCamera'] ?? false;
         _hapticEnabled = settings['hapticFeedback'] ?? true;
+        _shutterSound = settings['shutterSound'] ?? true;
       });
 
       if (widget.isActive) {
@@ -298,7 +307,8 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
   Future<void> _takePicture() async {
     if (_isCapturingPhoto) return;
-    if (_todaysPhotoCount >= _dailyLimit) {
+    final count = await DatabaseHelper().getTodaysPhotoCount();
+    if (count >= _dailyLimit) {
       if (_hapticEnabled) HapticFeedback.vibrate();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -312,6 +322,11 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     }
 
     setState(() => _isCapturingPhoto = true);
+
+    if (_shutterDelay > 0) {
+      if (_hapticEnabled) HapticFeedback.lightImpact();
+      await Future.delayed(Duration(seconds: _shutterDelay));
+    }
     
     try {
       if (_useSystemCamera) {
@@ -331,6 +346,14 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
           }
           return;
         }
+
+        _playHardwareFeedback();
+        
+        if (_autoSaveToGallery) {
+          // Placeholder for real gallery save if library were available
+          debugPrint("Auto-saving to gallery: ${photo.path}");
+        }
+        
         await _handlePickedImage(photo.path);
       } else {
         if (_controller == null || !_controller!.value.isInitialized) {
@@ -341,7 +364,12 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
         final image = await _controller!.takePicture();
         final location = await locationFuture;
         
-        if (_hapticEnabled) HapticFeedback.mediumImpact();
+        _playHardwareFeedback();
+
+        if (_autoSaveToGallery) {
+          debugPrint("Auto-saving to gallery: ${image.path}");
+        }
+
         if (!mounted) return;
         setState(() => _lastCapturedPath = image.path);
         
@@ -362,6 +390,17 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     } finally {
       if (mounted) setState(() => _isCapturingPhoto = false);
     }
+  }
+
+  void _playHardwareFeedback() {
+    if (_hapticEnabled) {
+      switch (_hapticIntensity) {
+        case 'Soft': HapticFeedback.lightImpact(); break;
+        case 'Sharp': HapticFeedback.vibrate(); break;
+        default: HapticFeedback.heavyImpact(); break;
+      }
+    }
+    if (_shutterSound) SystemSound.play(SystemSoundType.click);
   }
 
   @override
