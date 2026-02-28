@@ -201,6 +201,22 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     }
   }
 
+  Future<void> _onTapToFocus(TapUpDetails details, BoxConstraints constraints) async {
+    if (_controller == null || !_controller!.value.isInitialized) return;
+
+    final offset = details.localPosition;
+    final double x = offset.dx / constraints.maxWidth;
+    final double y = offset.dy / constraints.maxHeight;
+
+    try {
+      await _controller!.setFocusPoint(Offset(x, y));
+      await _controller!.setExposurePoint(Offset(x, y));
+      if (_hapticEnabled) HapticFeedback.selectionClick();
+    } catch (e) {
+      debugPrint("Focus error: $e");
+    }
+  }
+
   Future<void> _toggleCamera() async {
     if (_useSystemCamera) return;
     if (widget.cameras.length < 2) return;
@@ -397,11 +413,26 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
     return ColorFiltered(
       colorFilter: _currentFilter,
-      child: Transform.scale(
-        scale: scale,
-        child: Center(
-          child: CameraPreview(_controller!),
-        ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return GestureDetector(
+            onTapUp: (details) => _onTapToFocus(details, constraints),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Transform.scale(
+                  scale: scale,
+                  child: Center(
+                    child: CameraPreview(_controller!),
+                  ),
+                ),
+                if (_showGrid)
+                  const CustomPaint(painter: GridPainter()),
+                const CustomPaint(painter: ViewfinderCornersPainter()),
+              ],
+            ),
+          );
+        }
       ),
     );
   }

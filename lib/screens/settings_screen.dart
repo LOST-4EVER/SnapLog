@@ -75,7 +75,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
         title: const Text("Restart Required"),
-        content: const Text("Hardware optimizations will take full effect after restarting SnapLog."),
+        content: const Text("Hardware integration and resolution changes will take full effect after restarting SnapLog."),
         actions: [
           FilledButton(onPressed: () => Navigator.pop(context), child: const Text("UNDERSTOOD")),
         ],
@@ -138,7 +138,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!canAuthenticate) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Hardware security not available")),
+            const SnackBar(content: Text("Biometrics not available")),
           );
         }
         return;
@@ -146,7 +146,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       try {
         final bool authenticated = await _auth.authenticate(
-          localizedReason: 'Verify to enable Vault Lock',
+          localizedReason: 'Verify identity to enable Vault Lock',
           options: const AuthenticationOptions(stickyAuth: true, biometricOnly: true),
         );
         if (!authenticated) return;
@@ -218,15 +218,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar.large(
-            title: const Text("Elite Configuration"),
+            title: const Text("Preferences"),
             centerTitle: true,
             actions: [
-              IconButton(
-                onPressed: _resetToDefaults,
-                icon: const Icon(Icons.restart_alt_rounded),
-                tooltip: "Reset All",
-              ),
-              const SizedBox(width: 8),
+              const StreakBadge(size: 28),
+              const SizedBox(width: 16),
             ],
           ),
           SliverToBoxAdapter(
@@ -235,31 +231,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildStreakHero(colorScheme),
-                  const SizedBox(height: 24),
-                  
-                  const _SectionHeader(title: "Security & Access"),
+                  const _SectionHeader(title: "Security & Vault"),
                   _buildSettingsCard(
                     children: [
                       SwitchListTile(
                         value: _biometricLock,
                         onChanged: _toggleBiometrics,
                         secondary: Icon(Icons.fingerprint_rounded, color: colorScheme.primary),
-                        title: const Text("Biometric Vault Lock", style: TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: const Text("Fingerprint or Face ID required"),
+                        title: const Text("Biometric Lock", style: TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: const Text("Secure memories with hardware auth"),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       ),
                     ],
                   ),
 
                   const SizedBox(height: 24),
-                  const _SectionHeader(title: "Pro Capture System"),
+                  const _SectionHeader(title: "Camera Hardware"),
                   _buildSettingsCard(
                     children: [
                       _SettingsTile(
                         icon: Icons.camera_alt_rounded,
-                        title: "Daily Journal Limit",
-                        subtitle: "$_dailyLimit photos / 24h",
+                        title: "Daily Snap Limit",
+                        subtitle: "$_dailyLimit photos allowed / 24h",
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -281,7 +274,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onChanged: _toggleSystemCamera,
                         secondary: Icon(Icons.settings_input_component_rounded, color: colorScheme.primary),
                         title: const Text("Hardware Integration", style: TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: const Text("Use system camera processing"),
+                        subtitle: const Text("Direct system camera access"),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       ),
                       const Divider(height: 1, indent: 56, endIndent: 16),
@@ -295,21 +288,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   
                   const SizedBox(height: 24),
-                  const _SectionHeader(title: "Experience & Feel"),
+                  const _SectionHeader(title: "Experience Engine"),
                   _buildSettingsCard(
                     children: [
                       SwitchListTile(
                         value: _remindersEnabled,
                         onChanged: _toggleReminders,
                         secondary: Icon(Icons.alarm_on_rounded, color: colorScheme.primary),
-                        title: const Text("Smart Reminders", style: TextStyle(fontWeight: FontWeight.bold)),
+                        title: const Text("Daily Reminder", style: TextStyle(fontWeight: FontWeight.bold)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       ),
                       if (_remindersEnabled) ...[
                         const Divider(height: 1, indent: 56, endIndent: 16),
                         _SettingsTile(
                           icon: Icons.schedule_rounded,
-                          title: "Delivery Time",
+                          title: "Delivery Window",
                           subtitle: _reminderTime.format(context),
                           onTap: _selectTime,
                         ),
@@ -339,26 +332,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           _notifyChange();
                         },
                         secondary: Icon(Icons.widgets_rounded, color: colorScheme.primary),
-                        title: const Text("Home Screen Widget", style: TextStyle(fontWeight: FontWeight.bold)),
+                        title: const Text("Home Widget", style: TextStyle(fontWeight: FontWeight.bold)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       ),
                     ],
                   ),
 
                   const SizedBox(height: 24),
-                  const _SectionHeader(title: "Maintenance"),
+                  const _SectionHeader(title: "Data Stewardship"),
                   _buildSettingsCard(
                     color: colorScheme.errorContainer.withValues(alpha: 0.05),
                     children: [
                       _SettingsTile(
                         icon: Icons.cleaning_services_rounded,
-                        title: "Optimize Local Storage",
+                        title: "Optimize Storage",
                         onTap: () => _clearCache(),
                       ),
                       const Divider(height: 1, indent: 56, endIndent: 16),
                       _SettingsTile(
                         icon: Icons.delete_forever_rounded,
-                        title: "Factory Data Reset",
+                        title: "Total Factory Reset",
                         textColor: colorScheme.error,
                         onTap: () => _fullReset(),
                       ),
@@ -372,14 +365,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         const Text("SnapLog Pro", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 1)),
                         const SizedBox(height: 4),
                         const Text("Version 1.0.0", style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 16),
-                        const Text("Made by Lost Forever", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 24),
+                        const Text("Developed by LOST-4EVER", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900)),
                         const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text("with ", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                            Text("with ", style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
                             Icon(Icons.favorite, size: 14, color: Colors.red),
-                            Text(" and with AI", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                            Text(" and with AI", style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
                           ],
                         ),
                         const SizedBox(height: 24),
@@ -395,7 +388,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             children: [
                               Icon(Icons.verified_user_rounded, size: 14, color: Colors.green),
                               SizedBox(width: 8),
-                              Text("100% Offline Secure", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.green)),
+                              Text("100% OFFLINE SECURE", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.green)),
                             ],
                           ),
                         ),
@@ -405,49 +398,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 120),
                 ],
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStreakHero(ColorScheme colorScheme) {
-    return Container(
-      padding: const EdgeInsets.all(28),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [colorScheme.primaryContainer, colorScheme.primary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(32),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.primary.withValues(alpha: 0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          )
-        ],
-      ),
-      child: const Row(
-        children: [
-          StreakBadge(size: 60),
-          SizedBox(width: 24),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "CURRENT MOMENTUM",
-                  style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 10),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  "Keep it burning!",
-                  style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900),
-                ),
-              ],
             ),
           ),
         ],
@@ -477,7 +427,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             const Padding(
               padding: EdgeInsets.all(24.0),
-              child: Text("Master Resolution", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20)),
+              child: Text("Capture Resolution", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20)),
             ),
             ...options.map((o) => ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 4),
@@ -505,11 +455,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        title: const Text("Reset Preferences?"),
-        content: const Text("This will restore all app settings to their factory defaults. Your journal entries will NOT be affected."),
+        title: const Text("Reset All Preferences?"),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("CANCEL")),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text("RESET NOW")),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text("RESET")),
         ],
       ),
     );
@@ -518,7 +467,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!mounted) return;
       _loadSettings();
       _notifyChange();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Preferences reset to default.")));
       _showRestartDialog();
     }
   }
@@ -529,7 +477,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
         title: const Text("Optimize Storage?"),
-        content: const Text("Clearing cache will remove temporary high-res artifacts. Your saved memories are 100% safe."),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("CANCEL")),
           FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text("OPTIMIZE")),
@@ -549,14 +496,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        title: const Text("CRITICAL: DATA WIPE?", style: TextStyle(color: Colors.red, fontWeight: FontWeight.w900)),
-        content: const Text("This will destroy all local encrypted memories and history forever. This is irreversible."),
+        title: const Text("DATA WIPE?", style: TextStyle(color: Colors.red, fontWeight: FontWeight.w900)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("ABORT")),
           FilledButton(
             onPressed: () => Navigator.pop(context, true), 
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text("DESTROY")
+            child: const Text("ERASE")
           ),
         ],
       ),
@@ -567,7 +513,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!mounted) return;
       _loadSettings();
       _notifyChange();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Factory state restored.")));
     }
   }
 }
