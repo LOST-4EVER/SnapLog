@@ -3,7 +3,7 @@
 **SnapLog Pro** is a high-performance, **100% Offline-Capable**, professional-grade daily photo-journaling application. Designed for speed, privacy, and satisfaction, it helps you capture and archive your life's journey with Material 3 elegance and elite hardware integration.
 
 screenshots 
-Screenshot_2026-02-28-15-53-14-840_com.example.snaplog-edit.jpg
+https://github.com/LOST-4EVER/SnapLog/blob/d23faf2619dc8577e3d0c2cfe355e5ba078494f4/Screenshot_2026-02-28-15-53-25-411_com.example.snaplog-edit.jpg
 
 
 ## 🚀 The Grand Finale (v1.0.1)
