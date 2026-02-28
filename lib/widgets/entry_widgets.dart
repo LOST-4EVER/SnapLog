@@ -86,7 +86,7 @@ class _EntryCardState extends State<EntryCard> {
                         decoration: BoxDecoration(
                           color: colorScheme.surface.withValues(alpha: 0.8),
                           shape: BoxShape.circle,
-                          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)]
+                          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10)]
                         ),
                         padding: const EdgeInsets.all(10),
                         child: Text(widget.entry.mood, style: const TextStyle(fontSize: 28)),
@@ -485,7 +485,7 @@ class OnThisDayCard extends StatelessWidget {
                   shape: BoxShape.circle,
                   boxShadow: [BoxShadow(color: colorScheme.primary.withValues(alpha: 0.3), blurRadius: 10)]
                 ),
-                child: Icon(Icons.history_toggle_off_rounded, color: Colors.white, size: 20),
+                child: const Icon(Icons.history_toggle_off_rounded, color: Colors.white, size: 20),
               ),
               const SizedBox(width: 16),
               Text(

@@ -1,6 +1,6 @@
 # SnapLog Pro 📸✨
 
-**SnapLog Pro** is a high-performance, professional-grade daily photo-journaling application. It combines minimalist Material 3 design with mindful constraints to help you capture, track, and organize your life's journey with precision and style.
+**SnapLog Pro** is a high-performance, **100% Offline-Capable**, professional-grade daily photo-journaling application. It combines minimalist Material 3 design with mindful constraints to help you capture, track, and organize your life's journey with precision and style.
 
 ## 🚀 What's New (v1.6.0+8) - The "Control & Momentum" Update
 
@@ -29,6 +29,9 @@
 - **🧠 Mindfulness & Security**:
   - **Biometric Lock**: Secure your data with device-level authentication.
   - **Security Quizzes**: Math challenges protect critical actions.
+- **📶 Offline-First Design**:
+  - **No Internet Required**: All features (Journal, Camera, Storage, Statistics) work perfectly without a connection.
+  - **Private**: Your data never leaves your device unless you choose to share it.
 
 ## 🛠️ Technical Stack
 

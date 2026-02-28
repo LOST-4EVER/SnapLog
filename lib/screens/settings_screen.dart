@@ -24,10 +24,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   
   int _dailyLimit = 3;
   String _imageQuality = 'High';
-  String _defaultFilter = 'Normal';
   bool _remindersEnabled = false;
   bool _useSystemCamera = false;
-  bool _mirrorFrontCamera = true;
   bool _hapticFeedback = true;
   bool _shutterSound = true;
   bool _biometricLock = false;
@@ -52,10 +50,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       setState(() {
         _dailyLimit = settings['dailyLimit'];
         _imageQuality = settings['imageQuality'];
-        _defaultFilter = settings['defaultFilter'];
         _remindersEnabled = settings['remindersEnabled'];
         _useSystemCamera = settings['useSystemCamera'] ?? false;
-        _mirrorFrontCamera = settings['mirrorFrontCamera'] ?? true;
         _hapticFeedback = settings['hapticFeedback'] ?? true;
         _shutterSound = settings['shutterSound'] ?? true;
         _biometricLock = settings['biometricLock'] ?? false;
@@ -136,7 +132,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       try {
         final bool authenticated = await _auth.authenticate(
-          localizedReason: 'Please authenticate to enable biometric lock',
+          localizedReason: 'Verify identity to enable lock',
           options: const AuthenticationOptions(stickyAuth: true, biometricOnly: true),
         );
         if (!authenticated) return;
@@ -156,14 +152,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await _settingsService.setUseSystemCamera(value);
     if (!mounted) return;
     setState(() => _useSystemCamera = value);
-    _notifyChange();
-    if (_hapticFeedback) HapticFeedback.selectionClick();
-  }
-
-  Future<void> _toggleMirrorFront(bool value) async {
-    await _settingsService.setMirrorFrontCamera(value);
-    if (!mounted) return;
-    setState(() => _mirrorFrontCamera = value);
     _notifyChange();
     if (_hapticFeedback) HapticFeedback.selectionClick();
   }
@@ -215,37 +203,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
         physics: const BouncingScrollPhysics(),
         slivers: [
           const SliverAppBar.large(
-            title: Text("Control Center"),
+            title: Text("Preferences"),
             centerTitle: true,
           ),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildStreakHero(colorScheme),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
                   
-                  const _SectionHeader(title: "Capture System"),
-                  const SizedBox(height: 12),
+                  const _SectionHeader(title: "Security"),
+                  _buildSettingsCard(
+                    children: [
+                      SwitchListTile(
+                        value: _biometricLock,
+                        onChanged: _toggleBiometrics,
+                        secondary: Icon(Icons.fingerprint_rounded, color: colorScheme.primary),
+                        title: const Text("App Lock", style: TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: const Text("Require authentication on launch"),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                        dense: true,
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+                  const _SectionHeader(title: "Camera & Capture"),
                   _buildSettingsCard(
                     children: [
                       _SettingsTile(
-                        icon: Icons.auto_awesome_motion_rounded,
-                        title: "Daily Snap Limit",
-                        subtitle: "Intentional photography limit: $_dailyLimit",
+                        icon: Icons.photo_camera_rounded,
+                        title: "Daily Limit",
+                        subtitle: "$_dailyLimit photos / day",
+                        onTap: () => _updateLimit(1), // Quick tap to increase? Or open dialog.
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton.filledTonal(
                               onPressed: () => _updateLimit(-1),
-                              icon: const Icon(Icons.remove, size: 18),
+                              icon: const Icon(Icons.remove, size: 16),
+                              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                             ),
                             const SizedBox(width: 8),
                             IconButton.filledTonal(
                               onPressed: () => _updateLimit(1),
-                              icon: const Icon(Icons.add, size: 18),
+                              icon: const Icon(Icons.add, size: 16),
+                              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                             ),
                           ],
                         ),
@@ -254,58 +260,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       SwitchListTile(
                         value: _useSystemCamera,
                         onChanged: _toggleSystemCamera,
-                        secondary: Icon(Icons.settings_input_component_rounded, color: colorScheme.primary),
-                        title: const Text("Hardware Integration", style: TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: const Text("Direct access to system AI & sensors"),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                        secondary: Icon(Icons.camera_rounded, color: colorScheme.primary),
+                        title: const Text("Use System Camera", style: TextStyle(fontWeight: FontWeight.w600)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                        dense: true,
                       ),
                       const Divider(height: 1, indent: 56, endIndent: 16),
                       _SettingsTile(
                         icon: Icons.high_quality_rounded,
-                        title: "Master Resolution",
-                        subtitle: "Output quality: $_imageQuality",
+                        title: "Resolution",
+                        subtitle: _imageQuality,
                         onTap: () => _showQualityPicker(),
                       ),
                     ],
                   ),
                   
-                  const SizedBox(height: 32),
-                  const _SectionHeader(title: "Security & Vault"),
-                  const SizedBox(height: 12),
-                  _buildSettingsCard(
-                    children: [
-                      SwitchListTile(
-                        value: _biometricLock,
-                        onChanged: _toggleBiometrics,
-                        secondary: Icon(Icons.fingerprint_rounded, color: colorScheme.primary),
-                        title: const Text("Biometric Encryption", style: TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: const Text("Secure vault with Fingerprint/Face ID"),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 32),
-                  const _SectionHeader(title: "Experience & Feel"),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 24),
+                  const _SectionHeader(title: "Interface"),
                   _buildSettingsCard(
                     children: [
                       SwitchListTile(
                         value: _hapticFeedback,
                         onChanged: _toggleHaptics,
                         secondary: Icon(Icons.vibration_rounded, color: colorScheme.primary),
-                        title: const Text("Tactile Engine", style: TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: const Text("Smart vibration on interactions"),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                        title: const Text("Haptic Feedback", style: TextStyle(fontWeight: FontWeight.w600)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                        dense: true,
                       ),
                       const Divider(height: 1, indent: 56, endIndent: 16),
                       SwitchListTile(
                         value: _shutterSound,
                         onChanged: _toggleShutterSound,
                         secondary: Icon(Icons.volume_up_rounded, color: colorScheme.primary),
-                        title: const Text("Audio Feedback", style: TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: const Text("Capture confirmation sounds"),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                        title: const Text("Shutter Sound", style: TextStyle(fontWeight: FontWeight.w600)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                        dense: true,
                       ),
                       const Divider(height: 1, indent: 56, endIndent: 16),
                       SwitchListTile(
@@ -316,56 +305,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           _notifyChange();
                         },
                         secondary: Icon(Icons.widgets_rounded, color: colorScheme.primary),
-                        title: const Text("Home Screen Widget", style: TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: const Text("Sync streak to Android home"),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                        title: const Text("Streak Widget", style: TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: const Text("Show on home screen"),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                        dense: true,
                       ),
                     ],
                   ),
 
-                  const SizedBox(height: 32),
-                  const _SectionHeader(title: "Automation"),
-                  const SizedBox(height: 12),
-                  _buildSettingsCard(
-                    children: [
-                      SwitchListTile(
-                        value: _remindersEnabled,
-                        onChanged: _toggleReminders,
-                        secondary: Icon(Icons.alarm_rounded, color: colorScheme.primary),
-                        title: const Text("Daily Pulse", style: TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: const Text("Automated capture reminders"),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                      ),
-                      if (_remindersEnabled) ...[
-                        const Divider(height: 1, indent: 56, endIndent: 16),
-                        _SettingsTile(
-                          icon: Icons.schedule_rounded,
-                          title: "Reminder Window",
-                          subtitle: _reminderTime.format(context),
-                          onTap: _selectTime,
-                        ),
-                      ],
-                    ],
-                  ),
-
-                  const SizedBox(height: 32),
-                  const _SectionHeader(title: "Data Integrity"),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 24),
+                  const _SectionHeader(title: "Data"),
                   _buildSettingsCard(
                     color: colorScheme.errorContainer.withValues(alpha: 0.05),
                     children: [
                       _SettingsTile(
-                        icon: Icons.cleaning_services_rounded,
-                        title: "Purge Cache",
-                        subtitle: "Cleanup temporary artifacts",
+                        icon: Icons.delete_outline_rounded,
+                        title: "Clear Cache",
                         onTap: () => _clearCache(),
                       ),
                       const Divider(height: 1, indent: 56, endIndent: 16),
                       _SettingsTile(
                         icon: Icons.delete_forever_rounded,
-                        title: "Total Wipeout",
+                        title: "Erase All Data",
                         textColor: colorScheme.error,
-                        subtitle: "Irreversible deletion of all data",
                         onTap: () => _fullReset(),
                       ),
                     ],
@@ -375,17 +337,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const Center(
                     child: Column(
                       children: [
-                        Text("SnapLog Pro", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1)),
-                        SizedBox(height: 4),
-                        Text("v1.6.0+8", style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
-                        SizedBox(height: 12),
-                        Icon(Icons.security_rounded, size: 16, color: Colors.green),
-                        SizedBox(height: 4),
-                        Text("Certified Encrypted Local Storage", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: Colors.green)),
+                        Text("SnapLog Pro", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        SizedBox(height: 2),
+                        Text("v1.6.0+8", style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        SizedBox(height: 8),
+                        Text("100% Offline Secure Storage", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: Colors.green)),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 140),
+                  const SizedBox(height: 100),
                 ],
               ),
             ),
@@ -397,38 +357,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildStreakHero(ColorScheme colorScheme) {
     return Container(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [colorScheme.primary, colorScheme.primaryContainer],
+          colors: [colorScheme.primaryContainer, colorScheme.primary],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(36),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.primary.withValues(alpha: 0.2),
-            blurRadius: 30,
-            offset: const Offset(0, 15),
-          )
-        ],
+        borderRadius: BorderRadius.circular(28),
       ),
       child: Row(
         children: [
-          const StreakBadge(size: 72),
-          const SizedBox(width: 24),
+          const StreakBadge(size: 48),
+          const SizedBox(width: 20),
           const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "CURRENT MOMENTUM",
-                  style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 10),
+                  "STREAK ACTIVE",
+                  style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w900, letterSpacing: 1.5, fontSize: 10),
                 ),
-                SizedBox(height: 4),
+                SizedBox(height: 2),
                 Text(
-                  "Elite Streak",
-                  style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900),
+                  "Keep it up!",
+                  style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -441,17 +394,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildSettingsCard({required List<Widget> children, Color? color}) {
     return Card(
       elevation: 0,
-      margin: EdgeInsets.zero,
+      margin: const EdgeInsets.symmetric(vertical: 4),
       clipBehavior: Clip.antiAlias,
       color: color ?? Theme.of(context).colorScheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Column(children: children),
     );
   }
 
   void _showQualityPicker() async {
     final options = ['Low', 'Medium', 'High', 'Max (Ultra)'];
-    final String? selected = await showModalBottomSheet<String>(
+    await showModalBottomSheet<String>(
       context: context,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
       builder: (context) => SafeArea(
@@ -465,7 +418,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ...options.map((o) => ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 32),
               title: Text(o, style: const TextStyle(fontWeight: FontWeight.bold)),
-              onTap: () => Navigator.pop(context, o),
+              onTap: () {
+                Navigator.pop(context, o);
+                if (o != _imageQuality) {
+                  _settingsService.setImageQuality(o);
+                  if (mounted) setState(() => _imageQuality = o);
+                  _notifyChange();
+                }
+              },
               trailing: _imageQuality == o ? Icon(Icons.check_circle_rounded, color: Theme.of(context).colorScheme.primary) : null,
             )),
             const SizedBox(height: 24),
@@ -473,13 +433,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ),
     );
-
-    if (selected != null && selected != _imageQuality) {
-      await _settingsService.setImageQuality(selected);
-      if (!mounted) return;
-      setState(() => _imageQuality = selected);
-      _notifyChange();
-    }
   }
 
   Future<void> _clearCache() async {
@@ -487,18 +440,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        title: const Text("Optimization: Purge Cache?"),
-        content: const Text("This will release storage by removing temporary high-res artifacts. Your journal remains intact."),
+        title: const Text("Clear Cache?"),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("CANCEL")),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text("PURGE NOW")),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text("CLEAR")),
         ],
       ),
     );
     if (confirm == true) {
       await _settingsService.clearAppCache();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("System cache purged.")));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Cache cleared.")));
       }
     }
   }
@@ -508,14 +460,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        title: const Text("CRITICAL: TOTAL WIPEOUT?", style: TextStyle(color: Colors.red, fontWeight: FontWeight.w900)),
-        content: const Text("This action is permanent. All encrypted memories, achievements, and metadata will be destroyed."),
+        title: const Text("ERASE ALL DATA?", style: TextStyle(color: Colors.red, fontWeight: FontWeight.w900)),
+        content: const Text("This cannot be undone."),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("ABORT")),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("CANCEL")),
           FilledButton(
             onPressed: () => Navigator.pop(context, true), 
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text("DESTROY DATA")
+            child: const Text("ERASE")
           ),
         ],
       ),
@@ -526,7 +478,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!mounted) return;
       _loadSettings();
       _notifyChange();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Data destroyed. Factory state restored.")));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("App reset to factory state.")));
     }
   }
 }
@@ -538,13 +490,13 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(left: 8.0),
+      padding: const EdgeInsets.fromLTRB(12, 0, 0, 8),
       child: Text(
         title.toUpperCase(),
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w900,
-          letterSpacing: 2,
+          letterSpacing: 1.5,
           color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
         ),
       ),
@@ -574,17 +526,18 @@ class _SettingsTile extends StatelessWidget {
     return ListTile(
       onTap: onTap,
       leading: Container(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 20),
+        child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 18),
       ),
-      title: Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: textColor, fontSize: 15)),
-      subtitle: subtitle != null ? Text(subtitle!, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7))) : null,
-      trailing: trailing ?? (onTap != null ? const Icon(Icons.chevron_right_rounded, size: 20) : null),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+      title: Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: textColor, fontSize: 14)),
+      subtitle: subtitle != null ? Text(subtitle!, style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.8))) : null,
+      trailing: trailing ?? (onTap != null ? const Icon(Icons.chevron_right_rounded, size: 18) : null),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      dense: true,
     );
   }
 }

@@ -32,8 +32,8 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   
   bool _showGrid = false;
   double _exposureOffset = 0.0;
-  double _minExposure = 0.0;
-  double _maxExposure = 0.0;
+  final double _minExposure = 0.0;
+  final double _maxExposure = 0.0;
 
   ColorFilter _currentFilter = const ColorFilter.mode(Colors.transparent, BlendMode.dst);
   String _filterName = "Normal";
@@ -157,13 +157,12 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       _initializeControllerFuture = controller.initialize();
       await _initializeControllerFuture;
       
-      // Optimization: Lock focus and exposure for better stability
       if (controller.value.isInitialized) {
         await controller.setExposureMode(ExposureMode.auto);
         await controller.setFocusMode(FocusMode.auto);
+        await controller.setFlashMode(_flashMode);
       }
       
-      await controller.setFlashMode(_flashMode);
       if (mounted) {
         setState(() {
           _controller = controller;
@@ -408,7 +407,6 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       return const Center(child: CircularProgressIndicator(color: Colors.white));
     }
 
-    // Autofit / Fill screen while maintaining aspect ratio
     var cameraValue = _controller!.value;
     var scale = size.aspectRatio * cameraValue.aspectRatio;
     if (scale < 1) scale = 1 / scale;
@@ -429,7 +427,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
-          padding: const EdgeInsets.fromLTRB(24, 56, 24, 16),
+          padding: const EdgeInsets.fromLTRB(24, 60, 24, 16),
           decoration: BoxDecoration(
             color: Colors.black.withValues(alpha: 0.3),
             border: const Border(bottom: BorderSide(color: Colors.white10, width: 0.5)),
@@ -438,17 +436,17 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _ProIconButton(
-                icon: _getFlashIcon(),
-                onPressed: _cycleFlashMode,
-                isActive: _flashMode != FlashMode.off,
-                activeColor: Colors.yellow,
+                icon: _showGrid ? Icons.grid_on_rounded : Icons.grid_off_rounded,
+                onPressed: () => setState(() => _showGrid = !_showGrid),
+                isActive: _showGrid,
                 isDisabled: _useSystemCamera,
               ),
               _buildPhotoCounter(colorScheme),
               _ProIconButton(
-                icon: _showGrid ? Icons.grid_on_rounded : Icons.grid_off_rounded,
-                onPressed: () => setState(() => _showGrid = !_showGrid),
-                isActive: _showGrid,
+                icon: _getFlashIcon(),
+                onPressed: _cycleFlashMode,
+                isActive: _flashMode != FlashMode.off,
+                activeColor: Colors.yellow,
                 isDisabled: _useSystemCamera,
               ),
             ],
