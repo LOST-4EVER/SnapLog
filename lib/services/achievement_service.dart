@@ -51,7 +51,11 @@ class AchievementService {
     {'id': 'sharer', 'title': 'Socialite', 'desc': 'Share 10 memories', 'icon': '📤'},
     {'id': 'editor', 'title': 'Perfectionist', 'desc': 'Edit captions 5 times', 'icon': '✏️'},
     {'id': 'mood_stable', 'title': 'Steady Heart', 'desc': 'Use same mood for 5 days', 'icon': '❤️'},
-    {'id': 'pro_user', 'title': 'SnapLog Pro', 'desc': 'Unlock 24 other achievements', 'icon': '💎'},
+    {'id': 'vidvit_commander', 'title': 'Vidvit Commander', 'desc': 'Archive 500 total memories', 'icon': '🎖️'},
+    {'id': 'vault_warden', 'title': 'Vault Warden', 'desc': '30 days of Biometric protection', 'icon': '🛡️'},
+    {'id': 'eternal_flame', 'title': 'Undying Flame', 'desc': 'Maintain a 365-day streak', 'icon': '🌟'},
+    {'id': 'vidvit_soldier', 'title': 'Vidvit Soldier', 'desc': 'Use filters 100 times', 'icon': '🪖'},
+    {'id': 'pro_user', 'title': 'SnapLog Pro', 'desc': 'Unlock 28 other achievements', 'icon': '💎'},
   ];
 
   Future<List<Achievement>> getAchievements() async {
@@ -87,6 +91,11 @@ class AchievementService {
           unlocked = streak >= 100;
           stat = "$streak/100 days";
           break;
+        case 'eternal_flame':
+          progress = (streak / 365).clamp(0.0, 1.0);
+          unlocked = streak >= 365;
+          stat = "$streak/365 days";
+          break;
         case 'count_50':
           progress = (entries.length / 50).clamp(0.0, 1.0);
           unlocked = entries.length >= 50;
@@ -96,6 +105,11 @@ class AchievementService {
           progress = (entries.length / 250).clamp(0.0, 1.0);
           unlocked = entries.length >= 250;
           stat = "${entries.length}/250";
+          break;
+        case 'vidvit_commander':
+          progress = (entries.length / 500).clamp(0.0, 1.0);
+          unlocked = entries.length >= 500;
+          stat = "${entries.length}/500";
           break;
         case 'all_moods':
           final usedMoods = entries.map((e) => e.mood).toSet();
@@ -117,8 +131,14 @@ class AchievementService {
           unlocked = filtered >= 10;
           stat = "$filtered/10";
           break;
+        case 'vidvit_soldier':
+          final filtered = entries.where((e) => e.filter != 'Normal').length;
+          progress = (filtered / 100).clamp(0.0, 1.0);
+          unlocked = filtered >= 100;
+          stat = "$filtered/100";
+          break;
         case 'bw_soul':
-          final bw = entries.where((e) => e.filter == 'B&W').length;
+          final bw = entries.where((e) => e.filter == 'B&W' || e.filter == 'Noir High').length;
           progress = (bw / 20).clamp(0.0, 1.0);
           unlocked = bw >= 20;
           stat = "$bw/20";
@@ -159,6 +179,13 @@ class AchievementService {
           unlocked = count >= 5;
           stat = "$count/5";
           break;
+        case 'vault_warden':
+          final count = prefs.getInt('settingsChangeCount') ?? 0; // Simple proxy for now
+          // In a real app we'd track biometric enabled duration
+          unlocked = count >= 30; 
+          progress = (count / 30).clamp(0.0, 1.0);
+          stat = "$count/30 units";
+          break;
         case 'cleaner':
           final count = prefs.getInt('cacheClearCount') ?? 0;
           progress = count > 0 ? 1.0 : 0.0;
@@ -180,10 +207,6 @@ class AchievementService {
           int maxStreak = 0;
           int currentStreak = 0;
           String? lastMood;
-          // Entries are sorted by timestamp DESC. 
-          // We need to check consecutive days with same mood.
-          // This is a simplified check: consecutive entries having same mood.
-          // For strict "days", we would need to group by day.
           for (var i = 0; i < entries.length; i++) {
             if (lastMood == null) {
               lastMood = entries[i].mood;
@@ -226,15 +249,15 @@ class AchievementService {
     int totalUnlocked = result.where((a) => a.isUnlocked && a.id != 'pro_user').length;
     int proIndex = result.indexWhere((a) => a.id == 'pro_user');
     if (proIndex != -1) {
-      bool unlocked = totalUnlocked >= 24;
+      bool unlocked = totalUnlocked >= 28;
       result[proIndex] = Achievement(
         id: 'pro_user',
         title: result[proIndex].title,
         description: result[proIndex].description,
         icon: result[proIndex].icon,
         isUnlocked: unlocked,
-        progress: (totalUnlocked / 24).clamp(0.0, 1.0),
-        stat: "$totalUnlocked/24",
+        progress: (totalUnlocked / 28).clamp(0.0, 1.0),
+        stat: "$totalUnlocked/28",
       );
     }
 

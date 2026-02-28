@@ -1,3 +1,4 @@
+import 'dart:io' as io;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
@@ -42,11 +43,17 @@ class NotificationService {
   }
 
   Future<void> scheduleDailyReminder(TimeOfDay time) async {
-    var status = await Permission.notification.status;
-    if (!status.isGranted) {
-      status = await Permission.notification.request();
+    if (io.Platform.isAndroid) {
+      final status = await Permission.notification.status;
+      if (!status.isGranted) {
+        await Permission.notification.request();
+      }
+      
+      // For Android 12+, we may need to request exact alarm permission
+      if (await Permission.scheduleExactAlarm.isDenied) {
+        await Permission.scheduleExactAlarm.request();
+      }
     }
-    if (!status.isGranted) return;
 
     await _notifications.cancel(0); // Regular reminder ID
 

@@ -177,18 +177,29 @@ class _MainNavigationState extends State<MainNavigation> {
 
   Future<void> _checkBiometricLock() async {
     try {
+      final bool canAuthenticateWithBiometrics = await _auth.canCheckBiometrics;
+      final bool canAuthenticate = canAuthenticateWithBiometrics || await _auth.isDeviceSupported();
+
+      if (!canAuthenticate) {
+        if (mounted) setState(() => _isLocked = false); // Unlock if no hardware support
+        return;
+      }
+
       final bool authenticated = await _auth.authenticate(
         localizedReason: 'Authenticate to access your journal',
-        options: const AuthenticationOptions(stickyAuth: true, biometricOnly: true),
+        options: const AuthenticationOptions(
+          stickyAuth: true, 
+          biometricOnly: false, // Allow fallback to PIN/Pattern
+          useErrorDialogs: true,
+        ),
       );
+      
       if (authenticated) {
         if (mounted) setState(() => _isLocked = false);
       } else {
-        // Keep locked if authentication fails
         if (mounted) setState(() => _isLocked = true);
       }
     } catch (e) {
-      // On error, keep the lock active to ensure security
       if (mounted) setState(() => _isLocked = true);
       debugPrint("Biometric auth error: $e");
     }

@@ -75,6 +75,30 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       0, 0, 0.8, 0, 0,
       0, 0, 0, 1, 0,
     ]),
+    "Noir High": const ColorFilter.matrix([
+      0.2126 * 1.5, 0.7152 * 1.5, 0.0722 * 1.5, 0, -50,
+      0.2126 * 1.5, 0.7152 * 1.5, 0.0722 * 1.5, 0, -50,
+      0.2126 * 1.5, 0.7152 * 1.5, 0.0722 * 1.5, 0, -50,
+      0,           0,           0,           1, 0,
+    ]),
+    "Cyber": const ColorFilter.matrix([
+      1, 0, 0, 0, 30,
+      0, 0.8, 0, 0, -20,
+      0, 0, 1.5, 0, 50,
+      0, 0, 0, 1, 0,
+    ]),
+    "Retro": const ColorFilter.matrix([
+      1, 0, 0, 0, 20,
+      0, 1.1, 0, 0, 10,
+      0, 0, 0.9, 0, -10,
+      0, 0, 0, 1, 0,
+    ]),
+    "Vivid": const ColorFilter.matrix([
+      1.2, 0, 0, 0, 0,
+      0, 1.2, 0, 0, 0,
+      0, 0, 1.2, 0, 0,
+      0, 0, 0, 1, 0,
+    ]),
   };
 
   @override

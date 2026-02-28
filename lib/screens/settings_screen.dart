@@ -432,6 +432,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         const SizedBox(height: 4),
                         const Text("Version 1.0.1", style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 24),
+                        const Text("Vidvit Elite Transformation", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.orange)),
                         const Text("Developed by LOST-4EVER", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900)),
                         const Row(
                           mainAxisSize: MainAxisSize.min,

@@ -185,7 +185,7 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
                 );
               }
 
-              return _buildGallery(filteredEntries);
+              return _buildGallery(filteredEntries, colorScheme);
             },
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 120)),
@@ -341,52 +341,42 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
     );
   }
 
-  Widget _buildGallery(List<PhotoEntry> entries) {
-    return SliverToBoxAdapter(
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 500),
-        transitionBuilder: (child, animation) => FadeTransition(
-          opacity: animation,
-          child: SlideTransition(
-            position: Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero).animate(animation),
-            child: child,
+  Widget _buildGallery(List<PhotoEntry> entries, ColorScheme colorScheme) {
+    if (_viewMode == ViewMode.day) {
+      return SliverPadding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        sliver: SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              if (index.isOdd) return const SizedBox(height: 24);
+              final entryIndex = index ~/ 2;
+              return EntryCard(entry: entries[entryIndex], onRefresh: _refreshEntries, hapticEnabled: _hapticEnabled);
+            },
+            childCount: entries.length * 2 - 1,
           ),
         ),
-        child: _viewMode == ViewMode.day 
-          ? _buildMemoirList(entries) 
-          : _buildMosaicGrid(entries, _viewMode == ViewMode.month ? 3 : 5),
-      ),
-    );
-  }
+      );
+    }
 
-  Widget _buildMemoirList(List<PhotoEntry> entries) {
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      separatorBuilder: (context, index) => const SizedBox(height: 24),
-      itemCount: entries.length,
-      itemBuilder: (context, index) => EntryCard(entry: entries[index], onRefresh: _refreshEntries, hapticEnabled: _hapticEnabled),
-    );
-  }
-
-  Widget _buildMosaicGrid(List<PhotoEntry> entries, int crossAxisCount) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+    final crossAxisCount = _viewMode == ViewMode.month ? 3 : 5;
+    return SliverPadding(
       padding: const EdgeInsets.all(16),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount, 
-        crossAxisSpacing: 12, 
-        mainAxisSpacing: 12,
-        childAspectRatio: 1,
-      ),
-      itemCount: entries.length,
-      itemBuilder: (context, index) => GridItem(
-        entry: entries[index], 
-        showDetails: crossAxisCount < 5,
-        onRefresh: _refreshEntries, 
-        hapticEnabled: _hapticEnabled
+      sliver: SliverGrid(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: crossAxisCount, 
+          crossAxisSpacing: 12, 
+          mainAxisSpacing: 12,
+          childAspectRatio: 1,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (context, index) => GridItem(
+            entry: entries[index], 
+            showDetails: crossAxisCount < 5,
+            onRefresh: _refreshEntries, 
+            hapticEnabled: _hapticEnabled
+          ),
+          childCount: entries.length,
+        ),
       ),
     );
   }
