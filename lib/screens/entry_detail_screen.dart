@@ -4,9 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../models/photo_entry.dart';
 import '../services/database_helper.dart';
 import '../services/entries_notifier.dart';
+import '../services/settings_service.dart';
 
 class EntryDetailScreen extends StatefulWidget {
   final List<String> imagePaths;
@@ -26,14 +28,54 @@ class EntryDetailScreen extends StatefulWidget {
 
 class _EntryDetailScreenState extends State<EntryDetailScreen> {
   final TextEditingController _captionController = TextEditingController();
+  final stt.SpeechToText _speech = stt.SpeechToText();
+  
   String _selectedMood = "😊";
   final List<String> _moods = ["😊", "📸", "🌟", "😴", "🍕", "🌈", "☕", "🎉", "💼", "💪", "🧗", "🎨"];
   bool _isSaving = false;
+  bool _isListening = false;
+  bool _hapticEnabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final settings = await SettingsService().getSettings();
+    if (mounted) {
+      setState(() {
+        _hapticEnabled = settings['hapticFeedback'] ?? true;
+      });
+    }
+  }
 
   @override
   void dispose() {
     _captionController.dispose();
     super.dispose();
+  }
+
+  Future<void> _toggleListening() async {
+    if (!_isListening) {
+      bool available = await _speech.initialize();
+      if (available) {
+        if (_hapticEnabled) HapticFeedback.mediumImpact();
+        setState(() => _isListening = true);
+        _speech.listen(
+          onResult: (result) {
+            setState(() {
+              _captionController.text = result.recognizedWords;
+            });
+          },
+        );
+      }
+    } else {
+      if (_hapticEnabled) HapticFeedback.lightImpact();
+      setState(() => _isListening = false);
+      _speech.stop();
+    }
   }
 
   Future<void> _saveEntry() async {
@@ -48,7 +90,6 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
         final fileName = "img_${DateTime.now().millisecondsSinceEpoch}_${permanentPaths.length}.jpg";
         final permanentPath = path.join(directory.path, fileName);
         
-        // Professional Image Compression
         await FlutterImageCompress.compressAndGetFile(
           tempPath,
           permanentPath,
@@ -57,7 +98,6 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
         );
         permanentPaths.add(permanentPath);
 
-        // Cleanup temporary camera file
         final tempFile = File(tempPath);
         if (await tempFile.exists()) {
           await tempFile.delete();
@@ -76,7 +116,7 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
       await DatabaseHelper().insertEntry(entry);
       EntriesNotifier().notifyEntryAdded();
 
-      HapticFeedback.heavyImpact();
+      if (_hapticEnabled) HapticFeedback.heavyImpact();
 
       if (!mounted) return;
       Navigator.of(context).popUntil((route) => route.isFirst);
@@ -117,7 +157,7 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
                       height: size.height * 0.45,
                       width: double.infinity,
                       fit: BoxFit.cover,
-                      cacheHeight: 1000, // Optimization: Avoid loading full res into RAM
+                      cacheHeight: 1000,
                     ),
                   ),
                 ),
@@ -156,6 +196,11 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
                         borderSide: BorderSide.none,
                       ),
                       prefixIcon: const Icon(Icons.notes),
+                      suffixIcon: IconButton(
+                        icon: Icon(_isListening ? Icons.mic : Icons.mic_none, 
+                          color: _isListening ? Colors.red : colorScheme.primary),
+                        onPressed: _toggleListening,
+                      ),
                     ),
                     maxLines: 3,
                     textCapitalization: TextCapitalization.sentences,
@@ -183,7 +228,7 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
                           child: InkWell(
                             onTap: () {
                               setState(() => _selectedMood = mood);
-                              HapticFeedback.selectionClick();
+                              if (_hapticEnabled) HapticFeedback.selectionClick();
                             },
                             borderRadius: BorderRadius.circular(20),
                             child: AnimatedContainer(

@@ -63,7 +63,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
   }
 
   void _notifyChange() {
-    EntriesNotifier().notifyEntryAdded(); // Triggers reload in other screens
+    EntriesNotifier().notifyEntryAdded(); 
   }
 
   Future<void> _updateLimit(int delta) async {
@@ -71,9 +71,10 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     if (newLimit != _dailyLimit) {
       final bool? passedQuiz = await Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const QuizScreen()),
+        MaterialPageRoute(builder: (context) => const QuizScreen(difficulty: QuizDifficulty.medium)),
       );
 
+      if (!mounted) return;
       if (passedQuiz == true) {
         await _settingsService.setDailyLimit(newLimit);
         setState(() => _dailyLimit = newLimit);
@@ -100,6 +101,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     }
     
     await _settingsService.setRemindersEnabled(value);
+    if (!mounted) return;
     setState(() => _remindersEnabled = value);
     _notifyChange();
     if (_hapticFeedback) HapticFeedback.lightImpact();
@@ -107,6 +109,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
 
   Future<void> _toggleSystemCamera(bool value) async {
     await _settingsService.setUseSystemCamera(value);
+    if (!mounted) return;
     setState(() => _useSystemCamera = value);
     _notifyChange();
     if (_hapticFeedback) HapticFeedback.selectionClick();
@@ -114,6 +117,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
 
   Future<void> _toggleMirrorFront(bool value) async {
     await _settingsService.setMirrorFrontCamera(value);
+    if (!mounted) return;
     setState(() => _mirrorFrontCamera = value);
     _notifyChange();
     if (_hapticFeedback) HapticFeedback.selectionClick();
@@ -121,6 +125,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
 
   Future<void> _toggleHaptics(bool value) async {
     await _settingsService.setHapticFeedback(value);
+    if (!mounted) return;
     setState(() => _hapticFeedback = value);
     _notifyChange();
     if (value) HapticFeedback.mediumImpact();
@@ -128,6 +133,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
 
   Future<void> _toggleShutterSound(bool value) async {
     await _settingsService.setShutterSound(value);
+    if (!mounted) return;
     setState(() => _shutterSound = value);
     _notifyChange();
     if (_hapticFeedback) HapticFeedback.selectionClick();
@@ -143,6 +149,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
       if (_remindersEnabled) {
         await _notificationService.scheduleDailyReminder(picked);
       }
+      if (!mounted) return;
       setState(() => _reminderTime = picked);
       _notifyChange();
       if (_hapticFeedback) HapticFeedback.mediumImpact();
@@ -173,14 +180,14 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                 children: [
                   _buildStreakCard(colorScheme),
                   const SizedBox(height: 32),
-                  const _SectionHeader(title: "Photography"),
+                  const _SectionHeader(title: "Preferences"),
                   const SizedBox(height: 12),
                   _buildSettingsCard(
                     children: [
                       _SettingsTile(
                         icon: Icons.photo_library_outlined,
-                        title: "Daily Photo Limit",
-                        subtitle: "Current limit: $_dailyLimit photos",
+                        title: "Daily Limit",
+                        subtitle: "Photos per day: $_dailyLimit",
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -202,7 +209,6 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         onChanged: _toggleSystemCamera,
                         secondary: Icon(Icons.camera_outlined, color: colorScheme.primary),
                         title: const Text("Use System Camera", style: TextStyle(fontWeight: FontWeight.w500)),
-                        subtitle: const Text("Launch phone's native camera app"),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
                       ),
                       const Divider(height: 1, indent: 56, endIndent: 16),
@@ -286,13 +292,13 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                     children: [
                       _SettingsTile(
                         icon: Icons.cleaning_services_outlined,
-                        title: "Clear App Cache",
+                        title: "Clear Cache",
                         onTap: () => _clearCache(),
                       ),
                       const Divider(height: 1, indent: 56, endIndent: 16),
                       _SettingsTile(
                         icon: Icons.restart_alt_outlined,
-                        title: "Reset All Settings",
+                        title: "Reset Settings",
                         onTap: () => _resetSettings(),
                       ),
                       const Divider(height: 1, indent: 56, endIndent: 16),
@@ -399,99 +405,114 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
 
   void _showFilterPicker() async {
     final filters = ['Normal', 'B&W', 'Sepia', 'Cool', 'Warm'];
-    final selected = await showModalBottomSheet<String>(
+    final String? selected = await showModalBottomSheet<String>(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-      builder: (context) => _PickerSheet(title: "Default Filter", options: filters, current: _defaultFilter),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: filters.map((f) => ListTile(
+            title: Text(f),
+            onTap: () => Navigator.pop(context, f),
+            trailing: _defaultFilter == f ? const Icon(Icons.check) : null,
+          )).toList(),
+        ),
+      ),
     );
-    if (selected != null) {
+
+    if (selected != null && selected != _defaultFilter) {
       await _settingsService.setDefaultFilter(selected);
+      if (!mounted) return;
       setState(() => _defaultFilter = selected);
       _notifyChange();
-      if (_hapticFeedback) HapticFeedback.selectionClick();
     }
   }
 
   void _showQualityPicker() async {
     final options = ['Low', 'Medium', 'High'];
-    final selected = await showModalBottomSheet<String>(
+    final String? selected = await showModalBottomSheet<String>(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-      builder: (context) => _PickerSheet(title: "Image Quality", options: options, current: _imageQuality),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: options.map((o) => ListTile(
+            title: Text(o),
+            onTap: () => Navigator.pop(context, o),
+            trailing: _imageQuality == o ? const Icon(Icons.check) : null,
+          )).toList(),
+        ),
+      ),
     );
-    if (selected != null) {
+
+    if (selected != null && selected != _imageQuality) {
       await _settingsService.setImageQuality(selected);
+      if (!mounted) return;
       setState(() => _imageQuality = selected);
       _notifyChange();
-      if (_hapticFeedback) HapticFeedback.selectionClick();
     }
   }
 
   Future<void> _clearCache() async {
-    final success = await _settingsService.clearAppCache();
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(success ? "Cache cleared" : "Failed to clear cache")),
-      );
-    }
-    if (_hapticFeedback) HapticFeedback.mediumImpact();
-  }
-
-  Future<void> _resetSettings() async {
-    final confirmed = await showDialog<bool>(
+    final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Reset Settings?"),
-        content: const Text("This will return all preferences to their default values."),
+        title: const Text("Clear Cache?"),
+        content: const Text("This will remove temporary files. Your photos are safe."),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text("Reset"),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Clear")),
         ],
       ),
     );
+    if (confirm == true) {
+      await _settingsService.clearAppCache();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Cache cleared")));
+      }
+    }
+  }
 
-    if (confirmed == true) {
+  Future<void> _resetSettings() async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Reset Settings?"),
+        content: const Text("All preferences will return to default values."),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Reset")),
+        ],
+      ),
+    );
+    if (confirm == true) {
       await _settingsService.resetAllSettings();
+      if (!mounted) return;
       _loadSettings();
       _notifyChange();
-      if (_hapticFeedback) HapticFeedback.heavyImpact();
     }
   }
 
   Future<void> _fullReset() async {
-    final bool? passedQuiz = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const QuizScreen(difficulty: QuizDifficulty.hard)),
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("WIPE ALL DATA?", style: TextStyle(color: Colors.red)),
+        content: const Text("This action is permanent. All photos and history will be deleted forever."),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("CANCEL")),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true), 
+            child: const Text("DELETE EVERYTHING", style: TextStyle(color: Colors.red))
+          ),
+        ],
+      ),
     );
-    if (passedQuiz != true) return;
-
-    if (mounted) {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text("Delete Everything?"),
-          content: const Text("This will permanently remove all your photos and reset settings."),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
-              child: const Text("Reset App"),
-            ),
-          ],
-        ),
-      );
-
-      if (confirmed == true) {
-        await DatabaseHelper().clearAllData();
-        await _settingsService.resetAllSettings();
-        _loadSettings();
-        _notifyChange();
-        if (_hapticFeedback) HapticFeedback.heavyImpact();
-      }
+    if (confirm == true) {
+      await DatabaseHelper().deleteAllEntries();
+      await _settingsService.resetAllSettings();
+      if (!mounted) return;
+      _loadSettings();
+      _notifyChange();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("All data wiped")));
     }
   }
 }
@@ -506,9 +527,9 @@ class _SectionHeader extends StatelessWidget {
       title.toUpperCase(),
       style: TextStyle(
         fontSize: 12,
-        fontWeight: FontWeight.bold,
-        color: Theme.of(context).colorScheme.primary,
+        fontWeight: FontWeight.w900,
         letterSpacing: 1.5,
+        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
       ),
     );
   }
@@ -535,40 +556,11 @@ class _SettingsTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       onTap: onTap,
-      leading: Icon(icon, color: textColor ?? Theme.of(context).colorScheme.onSurfaceVariant),
-      title: Text(title, style: TextStyle(color: textColor, fontWeight: FontWeight.w500)),
+      leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
+      title: Text(title, style: TextStyle(fontWeight: FontWeight.w500, color: textColor)),
       subtitle: subtitle != null ? Text(subtitle!) : null,
       trailing: trailing ?? (onTap != null ? const Icon(Icons.chevron_right, size: 20) : null),
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-    );
-  }
-}
-
-class _PickerSheet extends StatelessWidget {
-  final String title;
-  final List<String> options;
-  final String current;
-
-  const _PickerSheet({required this.title, required this.options, required this.current});
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Text(title, style: Theme.of(context).textTheme.titleLarge),
-          ),
-          ...options.map((opt) => ListTile(
-            title: Text(opt),
-            trailing: opt == current ? const Icon(Icons.check, color: Colors.green) : null,
-            onTap: () => Navigator.pop(context, opt),
-          )),
-          const SizedBox(height: 20),
-        ],
-      ),
     );
   }
 }

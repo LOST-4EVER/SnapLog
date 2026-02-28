@@ -118,6 +118,16 @@ class DatabaseHelper {
     }
   }
 
+  Future<void> deleteAllEntries() async {
+    try {
+      Database db = await database;
+      await db.delete('photo_entries');
+    } catch (e) {
+      debugPrint('Error deleting all entries: $e');
+      rethrow;
+    }
+  }
+
   Future<int> getTodaysPhotoCount() async {
     Database db = await database;
     final today = DateTime.now();

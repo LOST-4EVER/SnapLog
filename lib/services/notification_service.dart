@@ -29,7 +29,6 @@ class NotificationService {
       },
     );
 
-    // Create Notification Channel for Android 8.0+
     const AndroidNotificationChannel channel = AndroidNotificationChannel(
       'daily_reminders',
       'Daily Reminders',
@@ -43,11 +42,10 @@ class NotificationService {
   }
 
   Future<void> scheduleDailyReminder(TimeOfDay time) async {
-    // Check permission first
     final status = await Permission.notification.status;
     if (!status.isGranted) return;
 
-    await _notifications.cancelAll();
+    await _notifications.cancel(0); // Regular reminder ID
 
     final now = tz.TZDateTime.now(tz.local);
     var scheduledDate = tz.TZDateTime(
@@ -81,6 +79,32 @@ class NotificationService {
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+    
+    // Schedule a "Revive Streak" reminder 2 hours later if count is still 0
+    // Note: This is a static schedule. In a production app, we'd check the DB 
+    // before showing the notification.
+    _scheduleStreakRevive(scheduledDate.add(const Duration(hours: 2)));
+  }
+
+  Future<void> _scheduleStreakRevive(tz.TZDateTime scheduledDate) async {
+    await _notifications.zonedSchedule(
+      1,
+      '🔥 Streak at risk!',
+      'Revive your streak by taking a snap now! Don\'t let it die.',
+      scheduledDate,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'streak_revive',
+          'Streak Revive',
+          channelDescription: 'Reminders to keep your streak alive',
+          importance: Importance.max,
+          priority: Priority.max,
+        ),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }

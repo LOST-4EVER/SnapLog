@@ -206,7 +206,7 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("Mood Trends", style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          const Text("Mood Trends", style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 24),
           SizedBox(
             height: 180,
@@ -763,7 +763,7 @@ class _EntryDetailModalState extends State<_EntryDetailModal> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text("MY THOUGHTS", style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.primary, letterSpacing: 1.2, fontSize: 12)),
+                const Text("MY THOUGHTS", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent, letterSpacing: 1.2, fontSize: 12)),
                 IconButton.filledTonal(
                   icon: Icon(_isEditing ? Icons.check : Icons.edit_outlined, size: 18),
                   onPressed: () {

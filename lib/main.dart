@@ -2,18 +2,24 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:quick_actions/quick_actions.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'services/notification_service.dart';
+import 'services/achievement_service.dart';
 import 'screens/camera_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/advancements_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService().init();
   
+  // Initialize achievement states to prevent old popups
+  await AchievementService().initNotificationState();
+  
   final cameras = await availableCameras();
-  runApp(SnapLogApp(cameras: cameras));
+  runApp(
+    SnapLogApp(cameras: cameras),
+  );
 }
 
 class SnapLogApp extends StatelessWidget {
@@ -22,14 +28,13 @@ class SnapLogApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Standard high-contrast Material 3 Color Schemes (No Dynamic Color)
     final lightColorScheme = ColorScheme.fromSeed(
       seedColor: const Color(0xFF6750A4),
       brightness: Brightness.light,
     );
     
     final darkColorScheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFFD0BCFF), // Lighter purple for dark mode visibility
+      seedColor: const Color(0xFFD0BCFF), 
       brightness: Brightness.dark,
       surface: const Color(0xFF1C1B1F),
     );
@@ -40,14 +45,6 @@ class SnapLogApp extends StatelessWidget {
       theme: _buildTheme(lightColorScheme),
       darkTheme: _buildTheme(darkColorScheme),
       themeMode: ThemeMode.system,
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [
-        Locale('en', ''),
-      ],
       home: MainNavigation(cameras: cameras),
     );
   }
@@ -75,7 +72,7 @@ class SnapLogApp extends StatelessWidget {
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final isSelected = states.contains(WidgetState.selected);
           return TextStyle(
-            fontSize: 12, 
+            fontSize: 11, 
             fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
             color: isSelected ? colorScheme.onSurface : colorScheme.onSurfaceVariant,
           );
@@ -146,10 +143,82 @@ class _MainNavigationState extends State<MainNavigation> {
     _screens = [
       CameraScreen(cameras: widget.cameras),
       const HistoryScreen(),
+      const AdvancementsScreen(),
       const SettingsScreen(),
     ];
 
     _initQuickActions();
+    _startAchievementObserver();
+  }
+
+  void _startAchievementObserver() {
+    Future.delayed(const Duration(seconds: 2), _checkAchievements);
+  }
+
+  Future<void> _checkAchievements() async {
+    await AchievementService().checkNewUnlocks((achievement) {
+      if (!mounted) return;
+      _showAchievementToast(achievement);
+    });
+    Future.delayed(const Duration(seconds: 10), _checkAchievements);
+  }
+
+  void _showAchievementToast(Achievement a) {
+    final colorScheme = Theme.of(context).colorScheme;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        duration: const Duration(seconds: 4),
+        content: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: colorScheme.primaryContainer,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: colorScheme.primary, width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: colorScheme.primary.withValues(alpha: 0.2),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              )
+            ],
+          ),
+          child: Row(
+            children: [
+              Text(a.icon, style: const TextStyle(fontSize: 32)),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "ACHIEVEMENT UNLOCKED!",
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    Text(
+                      a.title,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _initQuickActions() {
@@ -207,6 +276,11 @@ class _MainNavigationState extends State<MainNavigation> {
             icon: Icon(Icons.auto_awesome_motion_outlined),
             selectedIcon: Icon(Icons.auto_awesome_motion),
             label: 'Journal',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.emoji_events_outlined),
+            selectedIcon: Icon(Icons.emoji_events),
+            label: 'Achievements',
           ),
           NavigationDestination(
             icon: Icon(Icons.tune_outlined),

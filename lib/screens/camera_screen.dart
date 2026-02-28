@@ -114,18 +114,16 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (_controller == null || !_controller!.value.isInitialized) return;
     if (state == AppLifecycleState.inactive) {
-      _isCameraInitialized = false;
-      _controller?.dispose();
-      _controller = null;
+      // Keep it warm but stop heavy work
     } else if (state == AppLifecycleState.resumed && !_useSystemCamera) {
-      _initializeCamera(widget.cameras[_selectedCameraIndex]);
+      if (!_controller!.value.isInitialized) {
+        _initializeCamera(widget.cameras[_selectedCameraIndex]);
+      }
     }
   }
 
   Future<void> _initializeCamera(CameraDescription cameraDescription) async {
-    if (_initializeControllerFuture != null) {
-      await _initializeControllerFuture;
-    }
+    if (_initializeControllerFuture != null) return;
 
     ResolutionPreset preset;
     switch (_imageQuality) {
@@ -284,11 +282,9 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       if (_hapticEnabled) HapticFeedback.vibrate();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Daily limit reached.'),
+          const SnackBar(
+            content: Text('Daily limit reached.'),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -369,7 +365,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
           Positioned.fill(
             child: _useSystemCamera 
               ? _buildSystemCameraPlaceholder(colorScheme)
-              : _buildCustomCameraView(colorScheme),
+              : _buildAutofitCameraView(size),
           ),
 
           // Glassmorphic Top Controls
@@ -392,6 +388,27 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     );
   }
 
+  Widget _buildAutofitCameraView(Size size) {
+    if (!_isCameraInitialized || _controller == null) {
+      return const Center(child: CircularProgressIndicator(color: Colors.white));
+    }
+
+    // Autofit / Fill screen while maintaining aspect ratio
+    var cameraValue = _controller!.value;
+    var scale = size.aspectRatio * cameraValue.aspectRatio;
+    if (scale < 1) scale = 1 / scale;
+
+    return ColorFiltered(
+      colorFilter: _currentFilter,
+      child: Transform.scale(
+        scale: scale,
+        child: Center(
+          child: CameraPreview(_controller!),
+        ),
+      ),
+    );
+  }
+
   Widget _buildGlassTopBar(ColorScheme colorScheme) {
     return ClipRect(
       child: BackdropFilter(
@@ -406,7 +423,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _ProIconButton(
-                icon: _flashMode == FlashMode.off ? Icons.flash_off : Icons.flash_on,
+                icon: _getFlashIcon(),
                 onPressed: _cycleFlashMode,
                 isActive: _flashMode != FlashMode.off,
                 activeColor: Colors.yellow,
@@ -414,7 +431,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
               ),
               _buildPhotoCounter(colorScheme),
               _ProIconButton(
-                icon: _showGrid ? Icons.grid_on : Icons.grid_off,
+                icon: _showGrid ? Icons.grid_on_rounded : Icons.grid_off_rounded,
                 onPressed: () => setState(() => _showGrid = !_showGrid),
                 isActive: _showGrid,
                 isDisabled: _useSystemCamera,
@@ -424,6 +441,15 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
         ),
       ),
     );
+  }
+
+  IconData _getFlashIcon() {
+    switch (_flashMode) {
+      case FlashMode.off: return Icons.flash_off_rounded;
+      case FlashMode.auto: return Icons.flash_auto_rounded;
+      case FlashMode.always: return Icons.flash_on_rounded;
+      case FlashMode.torch: return Icons.flashlight_on_rounded;
+    }
   }
 
   Widget _buildPhotoCounter(ColorScheme colorScheme) {
@@ -461,69 +487,69 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (!_useSystemCamera && _isCameraInitialized)
-            _buildExposureSlider(),
-          const SizedBox(height: 32),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Gallery Thumbnail
               _buildGalleryButton(colorScheme),
-
-              // Capture Shutter
               _buildCaptureShutter(colorScheme),
-
-              // Switch Camera
               _buildFlipButton(colorScheme),
             ],
           ),
+          if (!_useSystemCamera && _isCameraInitialized) ...[
+            const SizedBox(height: 20),
+            _buildExposureSlider(),
+          ],
         ],
       ),
     );
   }
 
   Widget _buildExposureSlider() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white10),
-          ),
-          child: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.refresh_rounded, color: Colors.white54, size: 18),
-                onPressed: _resetExposure,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.light_mode_outlined, color: Colors.white54, size: 16),
-              Expanded(
-                child: SliderTheme(
-                  data: const SliderThemeData(
-                    trackHeight: 2,
-                    thumbShape: RoundSliderThumbShape(enabledThumbRadius: 6),
-                    overlayShape: RoundSliderOverlayShape(overlayRadius: 14),
-                    activeTrackColor: Colors.yellow,
-                    inactiveTrackColor: Colors.white24,
-                    thumbColor: Colors.white,
-                  ),
-                  child: Slider(
-                    value: _exposureOffset,
-                    min: _minExposure,
-                    max: _maxExposure,
-                    onChanged: _handleExposureChanged,
+    return Center(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: Container(
+            width: 220,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white10),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.refresh_rounded, color: Colors.white54, size: 16),
+                  onPressed: _resetExposure,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+                const SizedBox(width: 4),
+                const Icon(Icons.light_mode_outlined, color: Colors.white54, size: 14),
+                Expanded(
+                  child: SliderTheme(
+                    data: const SliderThemeData(
+                      trackHeight: 2,
+                      thumbShape: RoundSliderThumbShape(enabledThumbRadius: 5),
+                      overlayShape: RoundSliderOverlayShape(overlayRadius: 12),
+                      activeTrackColor: Colors.yellow,
+                      inactiveTrackColor: Colors.white24,
+                      thumbColor: Colors.white,
+                    ),
+                    child: Slider(
+                      value: _exposureOffset,
+                      min: _minExposure,
+                      max: _maxExposure,
+                      onChanged: _handleExposureChanged,
+                    ),
                   ),
                 ),
-              ),
-              const Icon(Icons.light_mode, color: Colors.yellow, size: 16),
-            ],
+                const Icon(Icons.light_mode, color: Colors.yellow, size: 14),
+              ],
+            ),
           ),
         ),
       ),
@@ -600,21 +626,6 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     );
   }
 
-  Widget _buildCustomCameraView(ColorScheme colorScheme) {
-    return ColorFiltered(
-      colorFilter: _currentFilter,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          _isCameraInitialized && _controller != null
-              ? CameraPreview(_controller!)
-              : const Center(child: CircularProgressIndicator(color: Colors.white)),
-          if (_showGrid) const CustomPaint(painter: GridPainter()),
-          const CustomPaint(painter: ViewfinderCornersPainter()),
-        ],
-      ),
-    );
-  }
 
   Widget _buildSystemCameraPlaceholder(ColorScheme colorScheme) {
     return Container(
