@@ -9,6 +9,7 @@ import '../models/photo_entry.dart';
 import '../services/database_helper.dart';
 import '../services/entries_notifier.dart';
 import '../services/settings_service.dart';
+import '../widgets/mood_selector.dart';
 
 class EntryDetailScreen extends StatefulWidget {
   final List<String> imagePaths;
@@ -31,7 +32,10 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
   final stt.SpeechToText _speech = stt.SpeechToText();
   
   String _selectedMood = "😊";
-  final List<String> _moods = ["😊", "📸", "🌟", "😴", "🍕", "🌈", "☕", "🎉", "💼", "💪", "🧗", "🎨"];
+  final List<String> _moods = [
+    "😊", "🌟", "📸", "🍕", "☕", "😴", "🌈", "🎉", "💼", "💪", "🧗", "🎨",
+    "🍃", "🌊", "🍦", "🎭", "🎮", "🚲", "🐶", "🐱", "❤️", "🍀", "🔥", "🏖️"
+  ];
   bool _isSaving = false;
   bool _isListening = false;
   bool _hapticEnabled = true;
@@ -54,6 +58,7 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
   @override
   void dispose() {
     _captionController.dispose();
+    _speech.stop();
     super.dispose();
   }
 
@@ -86,8 +91,9 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
       final directory = await getApplicationDocumentsDirectory();
       List<String> permanentPaths = [];
 
-      for (String tempPath in widget.imagePaths) {
-        final fileName = "img_${DateTime.now().millisecondsSinceEpoch}_${permanentPaths.length}.jpg";
+      for (int i = 0; i < widget.imagePaths.length; i++) {
+        final tempPath = widget.imagePaths[i];
+        final fileName = "img_${DateTime.now().millisecondsSinceEpoch}_$i.jpg";
         final permanentPath = path.join(directory.path, fileName);
         
         await FlutterImageCompress.compressAndGetFile(
@@ -154,7 +160,7 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
                     borderRadius: BorderRadius.circular(24),
                     child: Image.file(
                       File(widget.imagePaths[0]),
-                      height: size.height * 0.45,
+                      height: size.height * 0.4,
                       width: double.infinity,
                       fit: BoxFit.cover,
                       cacheHeight: 1000,
@@ -184,7 +190,8 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
                       ],
                     ),
                   ],
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
+                  
                   TextField(
                     controller: _captionController,
                     decoration: InputDecoration(
@@ -206,7 +213,7 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
                     textCapitalization: TextCapitalization.sentences,
                   ),
                   
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
                   
                   Text(
                     "Select your mood",
@@ -215,44 +222,14 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  SizedBox(
-                    height: 75,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _moods.length,
-                      itemBuilder: (context, index) {
-                        final mood = _moods[index];
-                        final isSelected = _selectedMood == mood;
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 12),
-                          child: InkWell(
-                            onTap: () {
-                              setState(() => _selectedMood = mood);
-                              if (_hapticEnabled) HapticFeedback.selectionClick();
-                            },
-                            borderRadius: BorderRadius.circular(20),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              width: 65,
-                              decoration: BoxDecoration(
-                                color: isSelected ? colorScheme.primaryContainer : colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: isSelected ? colorScheme.primary : Colors.transparent,
-                                  width: 2,
-                                ),
-                              ),
-                              child: Center(
-                                child: Text(mood, style: const TextStyle(fontSize: 32)),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                  MoodSelector(
+                    moods: _moods,
+                    selectedMood: _selectedMood,
+                    onMoodSelected: (mood) => setState(() => _selectedMood = mood),
+                    hapticEnabled: _hapticEnabled,
                   ),
                   
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 48),
                   
                   SizedBox(
                     width: double.infinity,
@@ -262,7 +239,7 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
                       icon: _isSaving 
                           ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                           : const Icon(Icons.check_circle_outline),
-                      label: Text(_isSaving ? "Optimizing & Saving..." : "Complete Entry"),
+                      label: Text(_isSaving ? "Saving Memory..." : "Complete Entry"),
                       style: FilledButton.styleFrom(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),

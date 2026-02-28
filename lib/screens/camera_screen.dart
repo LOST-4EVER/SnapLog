@@ -13,7 +13,8 @@ import 'preview_screen.dart';
 
 class CameraScreen extends StatefulWidget {
   final List<CameraDescription> cameras;
-  const CameraScreen({super.key, required this.cameras});
+  final bool isActive;
+  const CameraScreen({super.key, required this.cameras, this.isActive = true});
 
   @override
   State<CameraScreen> createState() => _CameraScreenState();
@@ -86,7 +87,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     _notifierListener = () => _loadData();
     _notifier.addListener(_notifierListener);
     _loadData().then((_) {
-      if (mounted && !_useSystemCamera) {
+      if (mounted && !_useSystemCamera && widget.isActive) {
         _initializeCamera(widget.cameras[_selectedCameraIndex]);
       }
     });
@@ -111,19 +112,31 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
    }
 
   @override
+  void didUpdateWidget(CameraScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && !oldWidget.isActive) {
+      if (!_useSystemCamera) _initializeCamera(widget.cameras[_selectedCameraIndex]);
+    } else if (!widget.isActive && oldWidget.isActive) {
+      _controller?.dispose();
+      _controller = null;
+      _isCameraInitialized = false;
+      _initializeControllerFuture = null;
+    }
+  }
+
+  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (_controller == null || !_controller!.value.isInitialized) return;
     if (state == AppLifecycleState.inactive) {
-      // Keep it warm but stop heavy work
-    } else if (state == AppLifecycleState.resumed && !_useSystemCamera) {
-      if (!_controller!.value.isInitialized) {
-        _initializeCamera(widget.cameras[_selectedCameraIndex]);
-      }
+      _controller?.dispose();
+      _isCameraInitialized = false;
+    } else if (state == AppLifecycleState.resumed && !_useSystemCamera && widget.isActive) {
+      _initializeCamera(widget.cameras[_selectedCameraIndex]);
     }
   }
 
   Future<void> _initializeCamera(CameraDescription cameraDescription) async {
-    if (_initializeControllerFuture != null) return;
+    if (_initializeControllerFuture != null || _isCapturingPhoto) return;
 
     ResolutionPreset preset;
     switch (_imageQuality) {
@@ -180,12 +193,14 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
         _hapticEnabled = settings['hapticFeedback'] ?? true;
       });
 
-      if (oldUseSystemCamera && !_useSystemCamera) {
-        _initializeCamera(widget.cameras[_selectedCameraIndex]);
-      } else if (!oldUseSystemCamera && _useSystemCamera) {
-        _controller?.dispose();
-        _controller = null;
-        _isCameraInitialized = false;
+      if (widget.isActive) {
+        if (oldUseSystemCamera && !_useSystemCamera) {
+          _initializeCamera(widget.cameras[_selectedCameraIndex]);
+        } else if (!oldUseSystemCamera && _useSystemCamera) {
+          _controller?.dispose();
+          _controller = null;
+          _isCameraInitialized = false;
+        }
       }
     }
   }
@@ -307,7 +322,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
         if (photo == null) {
           if (mounted) {
             setState(() => _isCapturingPhoto = false);
-            _initializeCamera(widget.cameras[_selectedCameraIndex]);
+            if (widget.isActive) _initializeCamera(widget.cameras[_selectedCameraIndex]);
           }
           return;
         }
@@ -639,6 +654,15 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
             const Text("SYSTEM CAMERA ACTIVE", style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, letterSpacing: 2)),
             const SizedBox(height: 8),
             const Text("MAXIMIZING AI & HARDWARE QUALITY", style: TextStyle(color: Colors.white38, fontSize: 10, letterSpacing: 1)),
+            const SizedBox(height: 48),
+            FilledButton.icon(
+              onPressed: _takePicture,
+              icon: const Icon(Icons.camera_alt),
+              label: const Text("OPEN CAMERA"),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              ),
+            ),
           ],
         ),
       ),

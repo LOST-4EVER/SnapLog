@@ -42,7 +42,10 @@ class NotificationService {
   }
 
   Future<void> scheduleDailyReminder(TimeOfDay time) async {
-    final status = await Permission.notification.status;
+    var status = await Permission.notification.status;
+    if (!status.isGranted) {
+      status = await Permission.notification.request();
+    }
     if (!status.isGranted) return;
 
     await _notifications.cancel(0); // Regular reminder ID

@@ -176,6 +176,32 @@ class AchievementService {
           unlocked = count >= 5;
           stat = "$count/5";
           break;
+        case 'mood_stable':
+          int maxStreak = 0;
+          int currentStreak = 0;
+          String? lastMood;
+          // Entries are sorted by timestamp DESC. 
+          // We need to check consecutive days with same mood.
+          // This is a simplified check: consecutive entries having same mood.
+          // For strict "days", we would need to group by day.
+          for (var i = 0; i < entries.length; i++) {
+            if (lastMood == null) {
+              lastMood = entries[i].mood;
+              currentStreak = 1;
+            } else if (entries[i].mood == lastMood) {
+              currentStreak++;
+            } else {
+              maxStreak = maxStreak > currentStreak ? maxStreak : currentStreak;
+              lastMood = entries[i].mood;
+              currentStreak = 1;
+            }
+          }
+          maxStreak = maxStreak > currentStreak ? maxStreak : currentStreak;
+          
+          progress = (maxStreak / 5).clamp(0.0, 1.0);
+          unlocked = maxStreak >= 5;
+          stat = "$maxStreak/5";
+          break;
         case 'flash_master':
           final count = prefs.getInt('flashUsageCount') ?? 0;
           progress = (count / 10).clamp(0.0, 1.0);

@@ -2,6 +2,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:quick_actions/quick_actions.dart';
+import 'services/entries_notifier.dart';
 import 'services/notification_service.dart';
 import 'services/achievement_service.dart';
 import 'screens/camera_screen.dart';
@@ -135,24 +136,29 @@ class _MainNavigationState extends State<MainNavigation> {
   late PageController _pageController;
   late List<Widget> _screens;
   final QuickActions _quickActions = const QuickActions();
+  late final EntriesNotifier _notifier;
+  late final VoidCallback _notifierListener;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: _selectedIndex);
     _screens = [
-      CameraScreen(cameras: widget.cameras),
-      const HistoryScreen(),
+      CameraScreen(cameras: widget.cameras, isActive: _selectedIndex == 0),
+      HistoryScreen(onCaptureRequested: () => _onItemTapped(0)),
       const AdvancementsScreen(),
       const SettingsScreen(),
     ];
 
     _initQuickActions();
-    _startAchievementObserver();
-  }
-
-  void _startAchievementObserver() {
-    Future.delayed(const Duration(seconds: 2), _checkAchievements);
+    
+    // Listen for changes to trigger achievement checks
+    _notifier = EntriesNotifier();
+    _notifierListener = () => _checkAchievements();
+    _notifier.addListener(_notifierListener);
+    
+    // Initial check
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkAchievements());
   }
 
   Future<void> _checkAchievements() async {
@@ -160,7 +166,6 @@ class _MainNavigationState extends State<MainNavigation> {
       if (!mounted) return;
       _showAchievementToast(achievement);
     });
-    Future.delayed(const Duration(seconds: 10), _checkAchievements);
   }
 
   void _showAchievementToast(Achievement a) {
@@ -238,6 +243,7 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   void dispose() {
+    _notifier.removeListener(_notifierListener);
     _pageController.dispose();
     super.dispose();
   }

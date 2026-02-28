@@ -14,7 +14,7 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProviderStateMixin {
+class _SettingsScreenState extends State<SettingsScreen> {
   final SettingsService _settingsService = SettingsService();
   final NotificationService _notificationService = NotificationService();
   
@@ -180,14 +180,14 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                 children: [
                   _buildStreakCard(colorScheme),
                   const SizedBox(height: 32),
-                  const _SectionHeader(title: "Preferences"),
+                  const _SectionHeader(title: "Capture Preferences"),
                   const SizedBox(height: 12),
                   _buildSettingsCard(
                     children: [
                       _SettingsTile(
                         icon: Icons.photo_library_outlined,
                         title: "Daily Limit",
-                        subtitle: "Photos per day: $_dailyLimit",
+                        subtitle: "Current limit: $_dailyLimit photos",
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -209,6 +209,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         onChanged: _toggleSystemCamera,
                         secondary: Icon(Icons.camera_outlined, color: colorScheme.primary),
                         title: const Text("Use System Camera", style: TextStyle(fontWeight: FontWeight.w500)),
+                        subtitle: const Text("High-quality hardware capture"),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
                       ),
                       const Divider(height: 1, indent: 56, endIndent: 16),
@@ -224,20 +225,20 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                       _SettingsTile(
                         icon: Icons.auto_awesome_outlined,
                         title: "Default Filter",
-                        subtitle: _defaultFilter,
+                        subtitle: "Selected: $_defaultFilter",
                         onTap: () => _showFilterPicker(),
                       ),
                       const Divider(height: 1, indent: 56, endIndent: 16),
                       _SettingsTile(
                         icon: Icons.high_quality_outlined,
                         title: "Image Quality",
-                        subtitle: _imageQuality,
+                        subtitle: "Current: $_imageQuality",
                         onTap: () => _showQualityPicker(),
                       ),
                     ],
                   ),
                   const SizedBox(height: 32),
-                  const _SectionHeader(title: "App Feedback"),
+                  const _SectionHeader(title: "Interface & Feedback"),
                   const SizedBox(height: 12),
                   _buildSettingsCard(
                     children: [
@@ -246,7 +247,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         onChanged: _toggleHaptics,
                         secondary: Icon(Icons.vibration_outlined, color: colorScheme.primary),
                         title: const Text("Haptic Feedback", style: TextStyle(fontWeight: FontWeight.w500)),
-                        subtitle: const Text("Feel the interaction"),
+                        subtitle: const Text("Tactile response on actions"),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
                       ),
                       const Divider(height: 1, indent: 56, endIndent: 16),
@@ -255,7 +256,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         onChanged: _toggleShutterSound,
                         secondary: Icon(Icons.volume_up_outlined, color: colorScheme.primary),
                         title: const Text("Shutter Sound", style: TextStyle(fontWeight: FontWeight.w500)),
-                        subtitle: const Text("Play sound on capture"),
+                        subtitle: const Text("Audible feedback on capture"),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
                       ),
                     ],
@@ -270,7 +271,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         onChanged: _toggleReminders,
                         secondary: Icon(Icons.notifications_active_outlined, color: colorScheme.primary),
                         title: const Text("Daily Reminders", style: TextStyle(fontWeight: FontWeight.w500)),
-                        subtitle: const Text("Never miss a moment"),
+                        subtitle: const Text("Get notified to snap a photo"),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
                       ),
                       if (_remindersEnabled) ...[
@@ -285,20 +286,52 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                     ],
                   ),
                   const SizedBox(height: 32),
-                  const _SectionHeader(title: "Danger Zone"),
+                  const _SectionHeader(title: "Community"),
                   const SizedBox(height: 12),
                   _buildSettingsCard(
-                    color: colorScheme.errorContainer.withValues(alpha: 0.15),
+                    children: [
+                      _SettingsTile(
+                        icon: Icons.rate_review_outlined,
+                        title: "Rate SnapLog Pro",
+                        subtitle: "Share your feedback with us",
+                        onTap: () {
+                          if (_hapticFeedback) HapticFeedback.selectionClick();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Redirecting to App Store...")),
+                          );
+                        },
+                      ),
+                      const Divider(height: 1, indent: 56, endIndent: 16),
+                      _SettingsTile(
+                        icon: Icons.share_outlined,
+                        title: "Invite Friends",
+                        subtitle: "Help others capture their story",
+                        onTap: () {
+                          if (_hapticFeedback) HapticFeedback.lightImpact();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Sharing SnapLog Pro...")),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                  const _SectionHeader(title: "Data Management"),
+                  const SizedBox(height: 12),
+                  _buildSettingsCard(
+                    color: colorScheme.errorContainer.withValues(alpha: 0.1),
                     children: [
                       _SettingsTile(
                         icon: Icons.cleaning_services_outlined,
-                        title: "Clear Cache",
+                        title: "Clear App Cache",
+                        subtitle: "Removes temporary images",
                         onTap: () => _clearCache(),
                       ),
                       const Divider(height: 1, indent: 56, endIndent: 16),
                       _SettingsTile(
                         icon: Icons.restart_alt_outlined,
-                        title: "Reset Settings",
+                        title: "Reset Preferences",
+                        subtitle: "Restore default settings",
                         onTap: () => _resetSettings(),
                       ),
                       const Divider(height: 1, indent: 56, endIndent: 16),
@@ -306,21 +339,21 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         icon: Icons.delete_forever_outlined,
                         title: "Wipe All Data",
                         textColor: colorScheme.error,
+                        subtitle: "Permanent deletion of all memories",
                         onTap: () => _fullReset(),
                       ),
                     ],
                   ),
                   const SizedBox(height: 48),
                   const Center(
-                    child: Opacity(
-                      opacity: 0.5,
-                      child: Column(
-                        children: [
-                          Text("SnapLog Pro made by (LOST-4EVER) <3 with Ai", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-                          SizedBox(height: 4),
-                          Text("v1.2.3", style: TextStyle(fontSize: 10)),
-                        ],
-                      ),
+                    child: Column(
+                      children: [
+                        Text("SnapLog Pro", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        SizedBox(height: 4),
+                        Text("v1.3.0+5", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        SizedBox(height: 8),
+                        Text("Crafted with Passion & AI", style: TextStyle(fontSize: 10, fontStyle: FontStyle.italic)),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 120),
@@ -407,14 +440,22 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     final filters = ['Normal', 'B&W', 'Sepia', 'Cool', 'Warm'];
     final String? selected = await showModalBottomSheet<String>(
       context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: filters.map((f) => ListTile(
-            title: Text(f),
-            onTap: () => Navigator.pop(context, f),
-            trailing: _defaultFilter == f ? const Icon(Icons.check) : null,
-          )).toList(),
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text("Select Default Filter", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            ),
+            ...filters.map((f) => ListTile(
+              title: Text(f),
+              onTap: () => Navigator.pop(context, f),
+              trailing: _defaultFilter == f ? const Icon(Icons.check_circle, color: Colors.green) : null,
+            )),
+            const SizedBox(height: 16),
+          ],
         ),
       ),
     );
@@ -431,14 +472,22 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     final options = ['Low', 'Medium', 'High'];
     final String? selected = await showModalBottomSheet<String>(
       context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: options.map((o) => ListTile(
-            title: Text(o),
-            onTap: () => Navigator.pop(context, o),
-            trailing: _imageQuality == o ? const Icon(Icons.check) : null,
-          )).toList(),
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text("Image Resolution", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            ),
+            ...options.map((o) => ListTile(
+              title: Text(o),
+              onTap: () => Navigator.pop(context, o),
+              trailing: _imageQuality == o ? const Icon(Icons.check_circle, color: Colors.green) : null,
+            )),
+            const SizedBox(height: 16),
+          ],
         ),
       ),
     );
@@ -456,7 +505,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Clear Cache?"),
-        content: const Text("This will remove temporary files. Your photos are safe."),
+        content: const Text("This will remove temporary files. Your saved photos are safe."),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
           TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Clear")),
@@ -466,7 +515,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     if (confirm == true) {
       await _settingsService.clearAppCache();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Cache cleared")));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Cache cleared successfully")));
       }
     }
   }
@@ -475,8 +524,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Reset Settings?"),
-        content: const Text("All preferences will return to default values."),
+        title: const Text("Reset Preferences?"),
+        content: const Text("All settings will return to their default values."),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
           TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Reset")),
@@ -488,6 +537,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
       if (!mounted) return;
       _loadSettings();
       _notifyChange();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Preferences reset")));
     }
   }
 
@@ -495,13 +545,13 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("WIPE ALL DATA?", style: TextStyle(color: Colors.red)),
-        content: const Text("This action is permanent. All photos and history will be deleted forever."),
+        title: const Text("WIPE ALL DATA?", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+        content: const Text("This action is permanent and irreversible. All photos and history will be deleted forever."),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("CANCEL")),
           TextButton(
             onPressed: () => Navigator.pop(context, true), 
-            child: const Text("DELETE EVERYTHING", style: TextStyle(color: Colors.red))
+            child: const Text("DELETE EVERYTHING", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))
           ),
         ],
       ),
@@ -512,7 +562,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
       if (!mounted) return;
       _loadSettings();
       _notifyChange();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("All data wiped")));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("All data wiped. Fresh start!")));
     }
   }
 }
@@ -556,9 +606,16 @@ class _SettingsTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       onTap: onTap,
-      leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
-      title: Text(title, style: TextStyle(fontWeight: FontWeight.w500, color: textColor)),
-      subtitle: subtitle != null ? Text(subtitle!) : null,
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 20),
+      ),
+      title: Text(title, style: TextStyle(fontWeight: FontWeight.w600, color: textColor)),
+      subtitle: subtitle != null ? Text(subtitle!, style: const TextStyle(fontSize: 12)) : null,
       trailing: trailing ?? (onTap != null ? const Icon(Icons.chevron_right, size: 20) : null),
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
     );
