@@ -217,12 +217,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          SliverAppBar.large(
-            title: const Text("Preferences"),
+          const SliverAppBar.large(
+            title: Text("Preferences"),
             centerTitle: true,
             actions: [
-              const StreakBadge(size: 28),
-              const SizedBox(width: 16),
+              StreakBadge(size: 28),
+              SizedBox(width: 16),
             ],
           ),
           SliverToBoxAdapter(
