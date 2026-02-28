@@ -279,30 +279,30 @@ class _MainNavigationState extends State<MainNavigation> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: _onItemTapped,
-        destinations: [
-          const NavigationDestination(icon: Icon(Icons.photo_camera_outlined), selectedIcon: Icon(Icons.photo_camera), label: 'Capture'),
-          const NavigationDestination(icon: Icon(Icons.auto_awesome_motion_outlined), selectedIcon: Icon(Icons.auto_awesome_motion), label: 'Journal'),
-          const NavigationDestination(icon: Icon(Icons.emoji_events_outlined), selectedIcon: Icon(Icons.emoji_events), label: 'Legacy'),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.photo_camera_outlined), selectedIcon: Icon(Icons.photo_camera), label: 'Capture'),
+          NavigationDestination(icon: Icon(Icons.auto_awesome_motion_outlined), selectedIcon: Icon(Icons.auto_awesome_motion), label: 'Journal'),
+          NavigationDestination(icon: Icon(Icons.emoji_events_outlined), selectedIcon: Icon(Icons.emoji_events), label: 'Legacy'),
           NavigationDestination(
             icon: Stack(
               clipBehavior: Clip.none,
               children: [
-                const Icon(Icons.tune_outlined),
+                Icon(Icons.tune_outlined),
                 Positioned(
                   top: -8,
                   right: -12,
-                  child: ScaleTransition(scale: const AlwaysStoppedAnimation(0.6), child: const StreakBadge()),
+                  child: ScaleTransition(scale: AlwaysStoppedAnimation(0.6), child: StreakBadge()),
                 ),
               ],
             ),
             selectedIcon: Stack(
               clipBehavior: Clip.none,
               children: [
-                const Icon(Icons.tune_rounded),
+                Icon(Icons.tune_rounded),
                 Positioned(
                   top: -8,
                   right: -12,
-                  child: ScaleTransition(scale: const AlwaysStoppedAnimation(0.6), child: const StreakBadge()),
+                  child: ScaleTransition(scale: AlwaysStoppedAnimation(0.6), child: StreakBadge()),
                 ),
               ],
             ),
