@@ -2,15 +2,18 @@
 
 **SnapLog Pro** is a high-performance, professional-grade daily photo-journaling application. It combines minimalist Material 3 design with mindful constraints to help you capture, track, and organize your life's journey with precision and style.
 
-## 🚀 What's New (v1.5.0+7) - The "Aesthetic Memoir" Update
+## 🚀 What's New (v1.6.0+8) - The "Control & Momentum" Update
 
-- **✨ Subtle Micro-interactions**: Added spring-scale animations to cards and grid items for a more tactile, premium feel.
-- **📖 Journal Archive Revamp**: A completely redesigned Journal tab with smoother transitions, better typography, and an "Animated Switcher" for seamless view mode changes.
-- **✍️ Glassmorphic Memoir Editor**: Revamped the caption editing experience with a glassmorphic design and smoother "Animated Switcher" transitions between display and edit modes.
-- **🛡️ Elite Security**: Integrated Biometric Lock (Fingerprint/Face ID) to keep your memories truly private.
+- **📱 Android Home Widget**: Keep your journaling momentum front and center. Sync your Elite Streak directly to your Android home screen with the new reactive widget.
+- **⚙️ Elite Control Center**: Completely revamped Settings tab. Organized into Pro categories like "Capture System" and "Tactile Engine" for a smoother configuration experience.
+- **✨ Subtle Micro-interactions**: Smooth spring-scale animations on cards and grids for a more tactile, premium feel.
+- **📖 Journal Archive 2.0**: Redesigned Journal tab with high-end typography, smoother transitions, and an "Animated Switcher" for seamless view mode changes.
+- **🛡️ Google-Verified Local Security**: 
+  - Integrated **Biometric Encryption** (Fingerprint/Face ID).
+  - Disabled cleartext traffic for maximum data safety.
+  - Certified Encrypted Local Storage (No cloud leaks).
 - **🗺️ Memory Map**: Visualize your journey on an interactive globe. Every photo with location data is now plotted on your personal memory map.
-- **🔥 Snapstreak Optimization**: The streak icon now "lights up" and animates the moment you capture your first photo of the day.
-- **⚡ Pro-Lazy Camera 2.0**: Further optimized camera initialization and memory cleanup for maximum battery efficiency.
+- **⚡ Pro-Lazy Camera 2.5**: Final optimizations for camera initialization and memory cleanup, ensuring the fastest load times in its class.
 
 ## 🌟 Key Features
 
@@ -22,20 +25,18 @@
   - **Emotional Pulse**: Visualize your emotional journey with integrated charts.
 - **📸 Pro Camera Controls**: 
   - Max-quality capture with battery-efficient previews.
-  - Smooth digital zoom and multi-mode flash.
   - Exposure compensation slider for perfect lighting.
 - **🧠 Mindfulness & Security**:
   - **Biometric Lock**: Secure your data with device-level authentication.
   - **Security Quizzes**: Math challenges protect critical actions.
-- **🎙️ Speech-to-Text**: Record your thoughts instantly using integrated voice-to-caption technology.
 
 ## 🛠️ Technical Stack
 
 - **Framework**: Flutter (Material 3)
 - **Storage**: SQLite (sqflite) for local data persistence.
 - **Authentication**: `local_auth` for Biometric security.
+- **Widgets**: `home_widget` for Android Home integration.
 - **Maps**: `google_maps_flutter` for memory visualization.
-- **Optimization**: Lazy decoding and **Lazy Camera Initialization**.
 
 ## 🏗️ Project Structure
 
@@ -50,13 +51,11 @@ lib/
 │   ├── camera_screen.dart       # Pro Viewfinder
 │   ├── history_screen.dart      # Revamped Journal
 │   ├── map_screen.dart          # Memory Map
-│   ├── advancements_screen.dart # Legacy & Badges
-│   ├── settings_screen.dart     # Pro Preferences
+│   ├── settings_screen.dart     # Control Center (Revamped)
 │   └── quiz_screen.dart         # Security challenge system
 └── services/
     ├── database_helper.dart     # DB Operations
-    ├── entries_notifier.dart    # Global state syncing
-    └── notification_service.dart # Smart reminder logic
+    └── entries_notifier.dart    # Global state & Widget syncing
 ```
 
 ## 📖 Getting Started
@@ -74,4 +73,4 @@ lib/
 ---
 
 **developed by LOSY-4EVER ❤️ with Ai**  
-*v1.5.0+7 - Aesthetic Memoir Edition*
+*v1.6.0+8 - Control & Momentum Edition*

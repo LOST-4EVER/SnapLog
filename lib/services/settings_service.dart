@@ -28,6 +28,7 @@ class SettingsService {
       'hapticFeedback': prefs.getBool('hapticFeedback') ?? true,
       'shutterSound': prefs.getBool('shutterSound') ?? true,
       'biometricLock': prefs.getBool('biometricLock') ?? false,
+      'showWidgetOnHome': prefs.getBool('showWidgetOnHome') ?? true,
       'shareCount': prefs.getInt('shareCount') ?? 0,
       'editCount': prefs.getInt('editCount') ?? 0,
       'settingsChangeCount': prefs.getInt('settingsChangeCount') ?? 0,
@@ -93,6 +94,12 @@ class SettingsService {
   Future<void> setBiometricLock(bool enabled) async {
     final prefs = await _getPrefs;
     await prefs.setBool('biometricLock', enabled);
+    await trackEvent('settingsChangeCount');
+  }
+
+  Future<void> setShowWidgetOnHome(bool enabled) async {
+    final prefs = await _getPrefs;
+    await prefs.setBool('showWidgetOnHome', enabled);
     await trackEvent('settingsChangeCount');
   }
 
