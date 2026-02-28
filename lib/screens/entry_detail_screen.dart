@@ -9,13 +9,15 @@ import '../services/database_helper.dart';
 import '../services/entries_notifier.dart';
 
 class EntryDetailScreen extends StatefulWidget {
-  final String imagePath;
+  final List<String> imagePaths;
   final String filterName;
+  final String? location;
 
   const EntryDetailScreen({
     super.key,
-    required this.imagePath,
+    required this.imagePaths,
     required this.filterName,
+    this.location,
   });
 
   @override
@@ -28,44 +30,53 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
   final List<String> _moods = ["😊", "📸", "🌟", "😴", "🍕", "🌈", "☕", "🎉", "💼", "💪", "🧗", "🎨"];
   bool _isSaving = false;
 
+  @override
+  void dispose() {
+    _captionController.dispose();
+    super.dispose();
+  }
+
   Future<void> _saveEntry() async {
     if (_isSaving) return;
     setState(() => _isSaving = true);
 
     try {
-      // 1. Compress and Move image to permanent storage
       final directory = await getApplicationDocumentsDirectory();
-      final fileName = "img_${DateTime.now().millisecondsSinceEpoch}.jpg";
-      final permanentPath = path.join(directory.path, fileName);
-      
-      // Professional Image Compression to reduce file size significantly
-      await FlutterImageCompress.compressAndGetFile(
-        widget.imagePath,
-        permanentPath,
-        quality: 85, // Balanced quality/size ratio
-        format: CompressFormat.jpeg,
-      );
+      List<String> permanentPaths = [];
 
-      // 2. Create and save entry
+      for (String tempPath in widget.imagePaths) {
+        final fileName = "img_${DateTime.now().millisecondsSinceEpoch}_${permanentPaths.length}.jpg";
+        final permanentPath = path.join(directory.path, fileName);
+        
+        // Professional Image Compression
+        await FlutterImageCompress.compressAndGetFile(
+          tempPath,
+          permanentPath,
+          quality: 85,
+          format: CompressFormat.jpeg,
+        );
+        permanentPaths.add(permanentPath);
+
+        // Cleanup temporary camera file
+        final tempFile = File(tempPath);
+        if (await tempFile.exists()) {
+          await tempFile.delete();
+        }
+      }
+
       final entry = PhotoEntry(
-        imagePath: permanentPath,
+        imagePaths: permanentPaths,
         caption: _captionController.text,
         mood: _selectedMood,
         filter: widget.filterName,
         timestamp: DateTime.now(),
+        location: widget.location,
       );
 
       await DatabaseHelper().insertEntry(entry);
-      // Notify listeners that a new entry was added
       EntriesNotifier().notifyEntryAdded();
 
       HapticFeedback.heavyImpact();
-      
-      // Cleanup temporary camera file
-      final tempFile = File(widget.imagePath);
-      if (await tempFile.exists()) {
-        await tempFile.delete();
-      }
 
       if (!mounted) return;
       Navigator.of(context).popUntil((route) => route.isFirst);
@@ -94,21 +105,23 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Hero(
-                tag: widget.imagePath,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: Image.file(
-                    File(widget.imagePath),
-                    height: size.height * 0.45, // Responsive height
-                    width: double.infinity,
-                    fit: BoxFit.cover,
+            if (widget.imagePaths.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Hero(
+                  tag: widget.imagePaths[0],
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: Image.file(
+                      File(widget.imagePaths[0]),
+                      height: size.height * 0.45,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      cacheHeight: 1000, // Optimization: Avoid loading full res into RAM
+                    ),
                   ),
                 ),
               ),
-            ),
             
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -121,6 +134,16 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+                  if (widget.location != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.location_on, size: 16, color: colorScheme.primary),
+                        const SizedBox(width: 4),
+                        Text(widget.location!, style: TextStyle(color: colorScheme.onSurfaceVariant)),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   TextField(
                     controller: _captionController,

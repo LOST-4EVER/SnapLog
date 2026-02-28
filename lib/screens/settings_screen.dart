@@ -1,14 +1,10 @@
-import 'dart:io';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:share_plus/share_plus.dart';
 import '../services/database_helper.dart';
 import '../services/settings_service.dart';
 import '../services/notification_service.dart';
+import '../services/entries_notifier.dart';
 import 'quiz_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -18,11 +14,6 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-const int _minDailyLimit = 1;
-const int _maxDailyLimit = 10;
-const double _cardBorderRadius = 24.0;
-const double _sectionHeaderSpacing = 32.0;
-
 class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProviderStateMixin {
   final SettingsService _settingsService = SettingsService();
   final NotificationService _notificationService = NotificationService();
@@ -30,480 +21,553 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
   int _dailyLimit = 3;
   String _imageQuality = 'High';
   String _defaultFilter = 'Normal';
+  bool _remindersEnabled = false;
+  bool _useSystemCamera = false;
+  bool _mirrorFrontCamera = true;
+  bool _hapticFeedback = true;
+  bool _shutterSound = true;
+  TimeOfDay _reminderTime = const TimeOfDay(hour: 20, minute: 0);
   
   late Future<int> _streakFuture;
-  bool _remindersEnabled = false;
-  TimeOfDay _reminderTime = const TimeOfDay(hour: 20, minute: 0);
-
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _initializeAnimations();
     _loadSettings();
-  }
-
-  void _initializeAnimations() {
-    _animationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
-    _fadeAnimation = CurvedAnimation(parent: _animationController, curve: Curves.easeIn);
-    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero)
-        .animate(CurvedAnimation(parent: _animationController, curve: Curves.easeInOutCubic));
-    _animationController.forward();
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadSettings() async {
     try {
       final settings = await _settingsService.getSettings();
-      final prefs = await SharedPreferences.getInstance();
       if (!mounted) return;
+      
+      final timeParts = (settings['reminderTime'] as String).split(':');
+      
       setState(() {
-        _dailyLimit = settings['dailyLimit'] ?? 3;
-        _imageQuality = settings['imageQuality'] ?? 'High';
-        _defaultFilter = settings['defaultFilter'] ?? 'Normal';
-        _remindersEnabled = prefs.getBool('remindersEnabled') ?? false;
-        final timeString = prefs.getString('reminderTime');
-        if (timeString != null) {
-          final parts = timeString.split(':');
-          _reminderTime = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
-        }
+        _dailyLimit = settings['dailyLimit'];
+        _imageQuality = settings['imageQuality'];
+        _defaultFilter = settings['defaultFilter'];
+        _remindersEnabled = settings['remindersEnabled'];
+        _useSystemCamera = settings['useSystemCamera'] ?? false;
+        _mirrorFrontCamera = settings['mirrorFrontCamera'] ?? true;
+        _hapticFeedback = settings['hapticFeedback'] ?? true;
+        _shutterSound = settings['shutterSound'] ?? true;
+        _reminderTime = TimeOfDay(hour: int.parse(timeParts[0]), minute: int.parse(timeParts[1]));
         _streakFuture = DatabaseHelper().calculateStreak();
+        _isLoading = false;
       });
     } catch (e) {
       debugPrint('Error loading settings: $e');
     }
   }
 
-  Future<void> _shareApp() async {
-    try {
-      // 1. Get the path to the current APK
-      // Note: On most Android devices, this is /data/app/.../base.apk
-      final String apkPath = Platform.resolvedExecutable;
-      
-      if (apkPath.isEmpty || !apkPath.contains('.apk')) {
-        // Fallback for debug mode or if path detection fails
-        await Share.share(
-          "Hey! I'm using SnapLog to capture my daily moments. You should try it too! Download it here: https://github.com/yourusername/snaplog. We appreciate you! ❤️",
-          subject: "Join me on SnapLog",
-        );
-        return;
-      }
-
-      // 2. Create a temporary copy of the APK to share
-      final File originalApk = File(apkPath);
-      final tempDir = await getTemporaryDirectory();
-      final String tempApkPath = "${tempDir.path}/SnapLog_Pro.apk";
-      final File tempApk = File(tempApkPath);
-
-      if (!await tempApk.exists()) {
-        await originalApk.copy(tempApkPath);
-      }
-
-      // 3. Trigger native share
-      final box = context.findRenderObject() as RenderBox?;
-      await Share.shareXFiles(
-        [XFile(tempApkPath)],
-        text: "SnapLog Pro - Capture your life daily. We appreciate you! ❤️",
-        subject: "Install SnapLog Pro",
-        sharePositionOrigin: box != null ? box.localToGlobal(Offset.zero) & box.size : null,
-      );
-    } catch (e) {
-      debugPrint("Error sharing APK: $e");
-      // UI Fallback
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Unable to locate APK. Sharing text link instead.")),
-        );
-        await Share.share("Hey! Try SnapLog Pro: Capture your daily moments. We appreciate you! ❤️");
-      }
-    }
+  void _notifyChange() {
+    EntriesNotifier().notifyEntryAdded(); // Triggers reload in other screens
   }
 
   Future<void> _updateLimit(int delta) async {
-    final newLimit = (_dailyLimit + delta).clamp(_minDailyLimit, _maxDailyLimit);
+    final newLimit = (_dailyLimit + delta).clamp(1, 10);
     if (newLimit != _dailyLimit) {
       final bool? passedQuiz = await Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const QuizScreen(difficulty: QuizDifficulty.normal)),
+        MaterialPageRoute(builder: (context) => const QuizScreen()),
       );
 
       if (passedQuiz == true) {
         await _settingsService.setDailyLimit(newLimit);
-        if (!mounted) return;
         setState(() => _dailyLimit = newLimit);
-        HapticFeedback.selectionClick();
+        _notifyChange();
+        if (_hapticFeedback) HapticFeedback.selectionClick();
       }
     }
   }
 
-  Future<void> _updateQuality(String? quality) async {
-    if (quality != null && quality != _imageQuality) {
-      await _settingsService.setImageQuality(quality);
-      if (!mounted) return;
-      setState(() => _imageQuality = quality);
-      HapticFeedback.selectionClick();
-    }
-  }
-
-  Future<void> _updateFilter(String? filter) async {
-    if (filter != null && filter != _defaultFilter) {
-      await _settingsService.setDefaultFilter(filter);
-      if (!mounted) return;
-      setState(() => _defaultFilter = filter);
-      HapticFeedback.selectionClick();
-    }
-  }
-
-  Future<void> _updateReminders(bool enabled) async {
-    if (!mounted) return;
-    setState(() => _remindersEnabled = enabled);
-    HapticFeedback.lightImpact();
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      if (enabled) {
-        final status = await Permission.notification.request();
-        if (status.isGranted) {
-          await _notificationService.scheduleDailyReminder(_reminderTime);
-          await prefs.setBool('remindersEnabled', true);
-        } else {
-          if (!mounted) return;
-          setState(() => _remindersEnabled = false);
-          _showPermissionDialog();
+  Future<void> _toggleReminders(bool value) async {
+    if (value) {
+      final status = await Permission.notification.request();
+      if (!status.isGranted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Notification permission denied")),
+          );
         }
-      } else {
-        await _notificationService.cancelAllReminders();
-        await prefs.setBool('remindersEnabled', false);
+        return;
       }
-    } catch (e) {
-      debugPrint('Error updating reminders: $e');
-      if (!mounted) return;
-      setState(() => _remindersEnabled = !enabled);
+      await _notificationService.scheduleDailyReminder(_reminderTime);
+    } else {
+      await _notificationService.cancelAllReminders();
     }
+    
+    await _settingsService.setRemindersEnabled(value);
+    setState(() => _remindersEnabled = value);
+    _notifyChange();
+    if (_hapticFeedback) HapticFeedback.lightImpact();
   }
 
-  void _showPermissionDialog() {
-    showDialog(
+  Future<void> _toggleSystemCamera(bool value) async {
+    await _settingsService.setUseSystemCamera(value);
+    setState(() => _useSystemCamera = value);
+    _notifyChange();
+    if (_hapticFeedback) HapticFeedback.selectionClick();
+  }
+
+  Future<void> _toggleMirrorFront(bool value) async {
+    await _settingsService.setMirrorFrontCamera(value);
+    setState(() => _mirrorFrontCamera = value);
+    _notifyChange();
+    if (_hapticFeedback) HapticFeedback.selectionClick();
+  }
+
+  Future<void> _toggleHaptics(bool value) async {
+    await _settingsService.setHapticFeedback(value);
+    setState(() => _hapticFeedback = value);
+    _notifyChange();
+    if (value) HapticFeedback.mediumImpact();
+  }
+
+  Future<void> _toggleShutterSound(bool value) async {
+    await _settingsService.setShutterSound(value);
+    setState(() => _shutterSound = value);
+    _notifyChange();
+    if (_hapticFeedback) HapticFeedback.selectionClick();
+  }
+
+  Future<void> _selectTime() async {
+    final TimeOfDay? picked = await showTimePicker(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Notifications Disabled"),
-        content: const Text("Please enable notifications in your phone settings to use reminders."),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("OK")),
-          TextButton(
-            onPressed: () {
-              openAppSettings();
-              Navigator.pop(context);
-            },
-            child: const Text("Settings"),
-          ),
-        ],
-      ),
+      initialTime: _reminderTime,
     );
-  }
-
-  Future<void> _selectTime(BuildContext context) async {
-    if (!_remindersEnabled) return;
-    final TimeOfDay? picked = await showTimePicker(context: context, initialTime: _reminderTime);
     if (picked != null && picked != _reminderTime) {
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        if (!mounted) return;
-        setState(() => _reminderTime = picked);
-        await prefs.setString('reminderTime', '${picked.hour}:${picked.minute}');
+      await _settingsService.setReminderTime("${picked.hour}:${picked.minute}");
+      if (_remindersEnabled) {
         await _notificationService.scheduleDailyReminder(picked);
-        HapticFeedback.mediumImpact();
-      } catch (e) {
-        debugPrint('Error updating time: $e');
       }
-    }
-  }
-
-  Future<void> _clearCache(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Clear Cache?"),
-        content: const Text("This will delete temporary image files and free up space."),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Clear")),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      final cacheDir = await getTemporaryDirectory();
-      if (cacheDir.existsSync()) cacheDir.deleteSync(recursive: true);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Cache cleared")));
-    }
-  }
-
-  Future<void> _fullDataReset(BuildContext context) async {
-    final bool? passedQuiz = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const QuizScreen(difficulty: QuizDifficulty.hard)),
-    );
-    if (passedQuiz != true) return;
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Wipe All Data?"),
-        content: const Text("This action is permanent. All your photos and journal entries will be deleted."),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text("Delete Everything"),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      await DatabaseHelper().clearAllData();
-      if (!mounted) return;
-      setState(() => _streakFuture = DatabaseHelper().calculateStreak());
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("All data wiped")));
+      setState(() => _reminderTime = picked);
+      _notifyChange();
+      if (_hapticFeedback) HapticFeedback.mediumImpact();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
-      appBar: AppBar(title: const Text("Settings"), centerTitle: true),
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: SlideTransition(
-          position: _slideAnimation,
-          child: ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              _SectionHeader(title: "Your Progress", color: colorScheme.primary),
-              const SizedBox(height: 12),
-              _buildStreakCard(colorScheme),
-              
-              const SizedBox(height: _sectionHeaderSpacing),
-              _SectionHeader(title: "Daily Reminders", color: colorScheme.primary),
-              const SizedBox(height: 12),
-              _buildNotificationCard(colorScheme),
-
-              const SizedBox(height: _sectionHeaderSpacing),
-              _SectionHeader(title: "Photography Prefs", color: colorScheme.primary),
-              const SizedBox(height: 12),
-              _buildPreferenceCard(colorScheme),
-
-              const SizedBox(height: _sectionHeaderSpacing),
-              _SectionHeader(title: "Community", color: colorScheme.primary),
-              const SizedBox(height: 12),
-              _SettingsTile(
-                icon: Icons.share_outlined,
-                title: "Share SnapLog App",
-                subtitle: "Tell others we appreciate you! ❤️",
-                onTap: _shareApp,
-              ),
-              
-              const SizedBox(height: _sectionHeaderSpacing),
-              _SectionHeader(title: "Danger Zone", color: colorScheme.error),
-              const SizedBox(height: 12),
-              _DangerZoneTile(icon: Icons.cleaning_services_outlined, title: "Clear App Cache", onTap: () => _clearCache(context)),
-              const SizedBox(height: 12),
-              _DangerZoneTile(icon: Icons.delete_forever_outlined, title: "Wipe All Data", isLast: true, onTap: () => _fullDataReset(context)),
-              
-              const SizedBox(height: 60),
-              Center(
-                child: Opacity(
-                  opacity: 0.6,
-                  child: Column(
+      backgroundColor: colorScheme.surface,
+      body: CustomScrollView(
+        slivers: [
+          const SliverAppBar.large(
+            title: Text("Settings"),
+            centerTitle: true,
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildStreakCard(colorScheme),
+                  const SizedBox(height: 32),
+                  const _SectionHeader(title: "Photography"),
+                  const SizedBox(height: 12),
+                  _buildSettingsCard(
                     children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text("made by "),
-                          Text("LOSY-4EVER", style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.primary)),
-                          const Text(" ❤️ with Ai"),
-                        ],
+                      _SettingsTile(
+                        icon: Icons.photo_library_outlined,
+                        title: "Daily Photo Limit",
+                        subtitle: "Current limit: $_dailyLimit photos",
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton.filledTonal(
+                              onPressed: () => _updateLimit(-1),
+                              icon: const Icon(Icons.remove, size: 18),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton.filledTonal(
+                              onPressed: () => _updateLimit(1),
+                              icon: const Icon(Icons.add, size: 18),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 10),
-                      Text("v1.2.0", style: Theme.of(context).textTheme.bodySmall),
+                      const Divider(height: 1, indent: 56, endIndent: 16),
+                      SwitchListTile(
+                        value: _useSystemCamera,
+                        onChanged: _toggleSystemCamera,
+                        secondary: Icon(Icons.camera_outlined, color: colorScheme.primary),
+                        title: const Text("Use System Camera", style: TextStyle(fontWeight: FontWeight.w500)),
+                        subtitle: const Text("Launch phone's native camera app"),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                      ),
+                      const Divider(height: 1, indent: 56, endIndent: 16),
+                      SwitchListTile(
+                        value: _mirrorFrontCamera,
+                        onChanged: _toggleMirrorFront,
+                        secondary: Icon(Icons.flip_camera_android_outlined, color: colorScheme.primary),
+                        title: const Text("Mirror Front Camera", style: TextStyle(fontWeight: FontWeight.w500)),
+                        subtitle: const Text("Save selfies as seen in preview"),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                      ),
+                      const Divider(height: 1, indent: 56, endIndent: 16),
+                      _SettingsTile(
+                        icon: Icons.auto_awesome_outlined,
+                        title: "Default Filter",
+                        subtitle: _defaultFilter,
+                        onTap: () => _showFilterPicker(),
+                      ),
+                      const Divider(height: 1, indent: 56, endIndent: 16),
+                      _SettingsTile(
+                        icon: Icons.high_quality_outlined,
+                        title: "Image Quality",
+                        subtitle: _imageQuality,
+                        onTap: () => _showQualityPicker(),
+                      ),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 32),
+                  const _SectionHeader(title: "App Feedback"),
+                  const SizedBox(height: 12),
+                  _buildSettingsCard(
+                    children: [
+                      SwitchListTile(
+                        value: _hapticFeedback,
+                        onChanged: _toggleHaptics,
+                        secondary: Icon(Icons.vibration_outlined, color: colorScheme.primary),
+                        title: const Text("Haptic Feedback", style: TextStyle(fontWeight: FontWeight.w500)),
+                        subtitle: const Text("Feel the interaction"),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                      ),
+                      const Divider(height: 1, indent: 56, endIndent: 16),
+                      SwitchListTile(
+                        value: _shutterSound,
+                        onChanged: _toggleShutterSound,
+                        secondary: Icon(Icons.volume_up_outlined, color: colorScheme.primary),
+                        title: const Text("Shutter Sound", style: TextStyle(fontWeight: FontWeight.w500)),
+                        subtitle: const Text("Play sound on capture"),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                  const _SectionHeader(title: "Notifications"),
+                  const SizedBox(height: 12),
+                  _buildSettingsCard(
+                    children: [
+                      SwitchListTile(
+                        value: _remindersEnabled,
+                        onChanged: _toggleReminders,
+                        secondary: Icon(Icons.notifications_active_outlined, color: colorScheme.primary),
+                        title: const Text("Daily Reminders", style: TextStyle(fontWeight: FontWeight.w500)),
+                        subtitle: const Text("Never miss a moment"),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                      ),
+                      if (_remindersEnabled) ...[
+                        const Divider(height: 1, indent: 56, endIndent: 16),
+                        _SettingsTile(
+                          icon: Icons.access_time,
+                          title: "Reminder Time",
+                          subtitle: _reminderTime.format(context),
+                          onTap: _selectTime,
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                  const _SectionHeader(title: "Danger Zone"),
+                  const SizedBox(height: 12),
+                  _buildSettingsCard(
+                    color: colorScheme.errorContainer.withValues(alpha: 0.15),
+                    children: [
+                      _SettingsTile(
+                        icon: Icons.cleaning_services_outlined,
+                        title: "Clear App Cache",
+                        onTap: () => _clearCache(),
+                      ),
+                      const Divider(height: 1, indent: 56, endIndent: 16),
+                      _SettingsTile(
+                        icon: Icons.restart_alt_outlined,
+                        title: "Reset All Settings",
+                        onTap: () => _resetSettings(),
+                      ),
+                      const Divider(height: 1, indent: 56, endIndent: 16),
+                      _SettingsTile(
+                        icon: Icons.delete_forever_outlined,
+                        title: "Wipe All Data",
+                        textColor: colorScheme.error,
+                        onTap: () => _fullReset(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 48),
+                  const Center(
+                    child: Opacity(
+                      opacity: 0.5,
+                      child: Column(
+                        children: [
+                          Text("SnapLog Pro made by (LOST-4EVER) <3 with Ai", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                          SizedBox(height: 4),
+                          Text("v1.2.3", style: TextStyle(fontSize: 10)),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 120),
+                ],
               ),
-              const SizedBox(height: 40),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
   Widget _buildStreakCard(ColorScheme colorScheme) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [colorScheme.primary, colorScheme.primary.withValues(alpha: 0.8)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.primary.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          )
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.local_fire_department, color: Colors.orangeAccent, size: 48),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Current Streak",
+                  style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w500),
+                ),
+                FutureBuilder<int>(
+                  future: _streakFuture,
+                  builder: (context, snapshot) {
+                    final streak = snapshot.data ?? 0;
+                    return Text(
+                      "$streak Days",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsCard({required List<Widget> children, Color? color}) {
     return Card(
       elevation: 0,
-      color: colorScheme.primaryContainer.withOpacity(0.3),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_cardBorderRadius)),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Row(
-          children: [
-            const Icon(Icons.local_fire_department, color: Colors.orange, size: 40),
-            const SizedBox(width: 20),
-            const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text("Current Streak", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)), Text("Capture daily to grow!", style: TextStyle(fontSize: 12, color: Colors.grey))])),
-            FutureBuilder<int>(
-              future: _streakFuture,
-              builder: (context, snapshot) {
-                final streak = snapshot.data ?? 0;
-                return Row(children: [Text("$streak", style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold)), const SizedBox(width: 4), const Text("Days", style: TextStyle(fontWeight: FontWeight.bold))]);
-              },
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      color: color ?? Theme.of(context).colorScheme.surfaceContainerLow,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Column(children: children),
+    );
+  }
+
+  void _showFilterPicker() async {
+    final filters = ['Normal', 'B&W', 'Sepia', 'Cool', 'Warm'];
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (context) => _PickerSheet(title: "Default Filter", options: filters, current: _defaultFilter),
+    );
+    if (selected != null) {
+      await _settingsService.setDefaultFilter(selected);
+      setState(() => _defaultFilter = selected);
+      _notifyChange();
+      if (_hapticFeedback) HapticFeedback.selectionClick();
+    }
+  }
+
+  void _showQualityPicker() async {
+    final options = ['Low', 'Medium', 'High'];
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (context) => _PickerSheet(title: "Image Quality", options: options, current: _imageQuality),
+    );
+    if (selected != null) {
+      await _settingsService.setImageQuality(selected);
+      setState(() => _imageQuality = selected);
+      _notifyChange();
+      if (_hapticFeedback) HapticFeedback.selectionClick();
+    }
+  }
+
+  Future<void> _clearCache() async {
+    final success = await _settingsService.clearAppCache();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(success ? "Cache cleared" : "Failed to clear cache")),
+      );
+    }
+    if (_hapticFeedback) HapticFeedback.mediumImpact();
+  }
+
+  Future<void> _resetSettings() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Reset Settings?"),
+        content: const Text("This will return all preferences to their default values."),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Reset"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _settingsService.resetAllSettings();
+      _loadSettings();
+      _notifyChange();
+      if (_hapticFeedback) HapticFeedback.heavyImpact();
+    }
+  }
+
+  Future<void> _fullReset() async {
+    final bool? passedQuiz = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const QuizScreen(difficulty: QuizDifficulty.hard)),
+    );
+    if (passedQuiz != true) return;
+
+    if (mounted) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("Delete Everything?"),
+          content: const Text("This will permanently remove all your photos and reset settings."),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
+              child: const Text("Reset App"),
             ),
           ],
         ),
-      ),
-    );
-  }
+      );
 
-  Widget _buildNotificationCard(ColorScheme colorScheme) {
-    return Card(
-      elevation: 0,
-      color: colorScheme.surfaceVariant.withOpacity(0.3),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_cardBorderRadius)),
-      child: Column(
-        children: [
-          SwitchListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            value: _remindersEnabled,
-            onChanged: _updateReminders,
-            title: const Text("Notifications", style: TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text(_remindersEnabled ? "Daily alerts active" : "Alerts disabled"),
-            secondary: Icon(_remindersEnabled ? Icons.notifications_active : Icons.notifications_off_outlined, color: _remindersEnabled ? colorScheme.primary : Colors.grey),
-          ),
-          if (_remindersEnabled) ...[
-            const Divider(indent: 70, endIndent: 24, height: 1),
-            ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-              leading: const Icon(Icons.access_time, size: 24),
-              title: const Text("Reminder Time"),
-              trailing: Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: colorScheme.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: Text(_reminderTime.format(context), style: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.bold))),
-              onTap: () => _selectTime(context),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPreferenceCard(ColorScheme colorScheme) {
-    return Card(
-      elevation: 0,
-      color: colorScheme.surfaceVariant.withOpacity(0.3),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_cardBorderRadius)),
-      child: Column(
-        children: [
-          ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            leading: const Icon(Icons.photo_library_outlined),
-            title: const Text("Daily Photo Limit", style: TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: const Text("Cap your moments"),
-            trailing: Row(mainAxisSize: MainAxisSize.min, children: [_LimitButton(icon: Icons.remove, onTap: () => _updateLimit(-1)), Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: Text("$_dailyLimit", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold))), _LimitButton(icon: Icons.add, onTap: () => _updateLimit(1))]),
-          ),
-          const Divider(indent: 70, endIndent: 24, height: 1),
-          ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            leading: const Icon(Icons.auto_awesome_outlined),
-            title: const Text("Default Filter", style: TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: const Text("Auto-apply on capture"),
-            trailing: DropdownButton<String>(
-              value: _defaultFilter,
-              underline: const SizedBox(),
-              items: ['Normal', 'B&W', 'Sepia', 'Cool', 'Warm'].map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
-              onChanged: _updateFilter,
-            ),
-          ),
-          const Divider(indent: 70, endIndent: 24, height: 1),
-          ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            leading: const Icon(Icons.high_quality_outlined),
-            title: const Text("Image Quality", style: TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: const Text("Manage resolution"),
-            trailing: DropdownButton<String>(
-              value: _imageQuality,
-              underline: const SizedBox(),
-              items: ['Low', 'Medium', 'High'].map((q) => DropdownMenuItem(value: q, child: Text(q))).toList(),
-              onChanged: _updateQuality,
-            ),
-          ),
-        ],
-      ),
-    );
+      if (confirmed == true) {
+        await DatabaseHelper().clearAllData();
+        await _settingsService.resetAllSettings();
+        _loadSettings();
+        _notifyChange();
+        if (_hapticFeedback) HapticFeedback.heavyImpact();
+      }
+    }
   }
 }
 
 class _SectionHeader extends StatelessWidget {
   final String title;
-  final Color color;
-  const _SectionHeader({required this.title, required this.color});
+  const _SectionHeader({required this.title});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: Text(title.toUpperCase(), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: color.withOpacity(0.7))));
-  }
-}
-
-class _LimitButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  const _LimitButton({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(onTap: onTap, child: Container(padding: const EdgeInsets.all(4), decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary.withOpacity(0.1), shape: BoxShape.circle), child: Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary)));
-  }
-}
-
-class _DangerZoneTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final VoidCallback onTap;
-  final bool isLast;
-
-  const _DangerZoneTile({required this.icon, required this.title, required this.onTap, this.isLast = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(elevation: 0, margin: EdgeInsets.zero, color: Colors.red.withOpacity(0.05), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.red.withOpacity(0.1))), child: ListTile(leading: Icon(icon, color: Colors.redAccent), title: Text(title, style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600)), trailing: const Icon(Icons.chevron_right, color: Colors.redAccent, size: 20), onTap: onTap));
+    return Text(
+      title.toUpperCase(),
+      style: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.bold,
+        color: Theme.of(context).colorScheme.primary,
+        letterSpacing: 1.5,
+      ),
+    );
   }
 }
 
 class _SettingsTile extends StatelessWidget {
   final IconData icon;
   final String title;
-  final String subtitle;
-  final VoidCallback onTap;
+  final String? subtitle;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+  final Color? textColor;
 
-  const _SettingsTile({required this.icon, required this.title, required this.subtitle, required this.onTap});
+  const _SettingsTile({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+    this.onTap,
+    this.textColor,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ListTile(
-        leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-        onTap: onTap,
+    return ListTile(
+      onTap: onTap,
+      leading: Icon(icon, color: textColor ?? Theme.of(context).colorScheme.onSurfaceVariant),
+      title: Text(title, style: TextStyle(color: textColor, fontWeight: FontWeight.w500)),
+      subtitle: subtitle != null ? Text(subtitle!) : null,
+      trailing: trailing ?? (onTap != null ? const Icon(Icons.chevron_right, size: 20) : null),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+    );
+  }
+}
+
+class _PickerSheet extends StatelessWidget {
+  final String title;
+  final List<String> options;
+  final String current;
+
+  const _PickerSheet({required this.title, required this.options, required this.current});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Text(title, style: Theme.of(context).textTheme.titleLarge),
+          ),
+          ...options.map((opt) => ListTile(
+            title: Text(opt),
+            trailing: opt == current ? const Icon(Icons.check, color: Colors.green) : null,
+            onTap: () => Navigator.pop(context, opt),
+          )),
+          const SizedBox(height: 20),
+        ],
       ),
     );
   }

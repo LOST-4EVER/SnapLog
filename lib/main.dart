@@ -1,6 +1,8 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:quick_actions/quick_actions.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'services/notification_service.dart';
 import 'screens/camera_screen.dart';
 import 'screens/history_screen.dart';
@@ -8,7 +10,6 @@ import 'screens/settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Initialize services
   await NotificationService().init();
   
   final cameras = await availableCameras();
@@ -21,78 +22,103 @@ class SnapLogApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Standard high-contrast Material 3 Color Schemes (No Dynamic Color)
+    final lightColorScheme = ColorScheme.fromSeed(
+      seedColor: const Color(0xFF6750A4),
+      brightness: Brightness.light,
+    );
+    
+    final darkColorScheme = ColorScheme.fromSeed(
+      seedColor: const Color(0xFFD0BCFF), // Lighter purple for dark mode visibility
+      brightness: Brightness.dark,
+      surface: const Color(0xFF1C1B1F),
+    );
+
     return MaterialApp(
       title: 'SnapLog Pro',
       debugShowCheckedModeBanner: false,
-      theme: _buildTheme(Brightness.light),
-      darkTheme: _buildTheme(Brightness.dark),
+      theme: _buildTheme(lightColorScheme),
+      darkTheme: _buildTheme(darkColorScheme),
       themeMode: ThemeMode.system,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en', ''),
+      ],
       home: MainNavigation(cameras: cameras),
     );
   }
 
-  ThemeData _buildTheme(Brightness brightness) {
+  ThemeData _buildTheme(ColorScheme colorScheme) {
     const roundedBorderRadius = 28.0;
-    const buttonBorderRadius = 20.0;
+    const buttonBorderRadius = 24.0;
 
-    var baseTheme = ThemeData(
+    return ThemeData(
       useMaterial3: true,
-      brightness: brightness,
-      colorSchemeSeed: const Color(0xFF6750A4), // Deep Purple from M3 Spec
-    );
-
-    return baseTheme.copyWith(
-      textTheme: GoogleFonts.plusJakartaSansTextTheme(baseTheme.textTheme),
+      colorScheme: colorScheme,
+      textTheme: GoogleFonts.plusJakartaSansTextTheme().apply(
+        bodyColor: colorScheme.onSurface,
+        displayColor: colorScheme.onSurface,
+      ),
       
       navigationBarTheme: NavigationBarThemeData(
         height: 80,
         elevation: 0,
-        backgroundColor: brightness == Brightness.light 
-            ? const Color(0xFFF3EDF7) // Soft Lavender background
-            : const Color(0xFF1C1B1F),
-        indicatorColor: brightness == Brightness.light 
-            ? const Color(0xFFE8DEF8) // Lighter Lavender indicator
-            : const Color(0xFF4A4458),
+        backgroundColor: colorScheme.surface,
+        indicatorColor: colorScheme.secondaryContainer,
         indicatorShape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.5,
-            );
-          }
-          return const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
+          final isSelected = states.contains(WidgetState.selected);
+          return TextStyle(
+            fontSize: 12, 
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected ? colorScheme.onSurface : colorScheme.onSurfaceVariant,
           );
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return const IconThemeData(size: 26);
-          }
-          return const IconThemeData(size: 24);
+          final isSelected = states.contains(WidgetState.selected);
+          return IconThemeData(
+            color: isSelected ? colorScheme.onSecondaryContainer : colorScheme.onSurfaceVariant,
+          );
         }),
       ),
 
-      cardTheme: baseTheme.cardTheme.copyWith(
+      cardTheme: CardThemeData(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(roundedBorderRadius),
         ),
         elevation: 0,
-        color: brightness == Brightness.light 
-            ? const Color(0xFFF7F2FA) 
-            : const Color(0xFF25232A),
+        color: colorScheme.surfaceContainerLow,
+      ),
+
+      appBarTheme: AppBarTheme(
+        centerTitle: true,
+        backgroundColor: colorScheme.surface,
+        foregroundColor: colorScheme.onSurface,
+        elevation: 0,
       ),
 
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
+          minimumSize: const Size(64, 56),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(buttonBorderRadius),
           ),
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+        ),
+      ),
+
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(64, 56),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(buttonBorderRadius),
+          ),
+          side: BorderSide(color: colorScheme.outline, width: 1.5),
         ),
       ),
     );
@@ -111,6 +137,7 @@ class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
   late PageController _pageController;
   late List<Widget> _screens;
+  final QuickActions _quickActions = const QuickActions();
 
   @override
   void initState() {
@@ -121,6 +148,23 @@ class _MainNavigationState extends State<MainNavigation> {
       const HistoryScreen(),
       const SettingsScreen(),
     ];
+
+    _initQuickActions();
+  }
+
+  void _initQuickActions() {
+    _quickActions.initialize((String shortcutType) {
+      if (shortcutType == 'action_capture') {
+        _onItemTapped(0);
+      } else if (shortcutType == 'action_journal') {
+        _onItemTapped(1);
+      }
+    });
+
+    _quickActions.setShortcutItems(<ShortcutItem>[
+      const ShortcutItem(type: 'action_capture', localizedTitle: 'Instant Capture', icon: 'ic_camera'),
+      const ShortcutItem(type: 'action_journal', localizedTitle: 'View Journal', icon: 'ic_journal'),
+    ]);
   }
 
   @override
@@ -138,9 +182,7 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   void _onPageChanged(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    setState(() => _selectedIndex = index);
   }
 
   @override
@@ -152,38 +194,26 @@ class _MainNavigationState extends State<MainNavigation> {
         physics: const BouncingScrollPhysics(),
         children: _screens,
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: NavigationBar(
-          selectedIndex: _selectedIndex,
-          onDestinationSelected: _onItemTapped,
-          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.photo_camera_outlined),
-              selectedIcon: Icon(Icons.photo_camera),
-              label: 'Capture',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.auto_awesome_motion_outlined),
-              selectedIcon: Icon(Icons.auto_awesome_motion),
-              label: 'Journal',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.tune_outlined),
-              selectedIcon: Icon(Icons.tune),
-              label: 'Settings',
-            ),
-          ],
-        ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: _onItemTapped,
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.photo_camera_outlined),
+            selectedIcon: Icon(Icons.photo_camera),
+            label: 'Capture',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.auto_awesome_motion_outlined),
+            selectedIcon: Icon(Icons.auto_awesome_motion),
+            label: 'Journal',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.tune_outlined),
+            selectedIcon: Icon(Icons.tune),
+            label: 'Settings',
+          ),
+        ],
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'entry_detail_screen.dart';
 import 'quiz_screen.dart';
+import 'full_screen_viewer.dart';
 import '../services/settings_service.dart';
 
 ColorFilter _filterForName(String name) {
@@ -45,11 +46,13 @@ ColorFilter _filterForName(String name) {
 class PreviewScreen extends StatefulWidget {
   final String imagePath;
   final String filterName;
+  final String? location;
 
   const PreviewScreen({
     super.key,
     required this.imagePath,
     required this.filterName,
+    this.location,
   });
 
   @override
@@ -58,6 +61,7 @@ class PreviewScreen extends StatefulWidget {
 
 class _PreviewScreenState extends State<PreviewScreen> {
   int _dailyLimit = 3;
+  bool _hapticEnabled = true;
 
   @override
   void initState() {
@@ -70,11 +74,14 @@ class _PreviewScreenState extends State<PreviewScreen> {
     if (mounted) {
       setState(() {
         _dailyLimit = settings['dailyLimit'] ?? 3;
+        _hapticEnabled = settings['hapticFeedback'] ?? true;
       });
     }
   }
 
   Future<void> _handleRetry() async {
+    if (_hapticEnabled) HapticFeedback.mediumImpact();
+    
     if (_dailyLimit == 1) {
       final bool? passedQuiz = await Navigator.push(
         context,
@@ -89,7 +96,21 @@ class _PreviewScreenState extends State<PreviewScreen> {
   }
 
   Future<void> _shareImage() async {
+    if (_hapticEnabled) HapticFeedback.lightImpact();
     await Share.shareXFiles([XFile(widget.imagePath)], text: 'Check out my SnapLog!');
+  }
+
+  void _showFullScreen() {
+    if (_hapticEnabled) HapticFeedback.selectionClick();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FullScreenViewer(
+          imagePath: widget.imagePath,
+          heroTag: 'preview_image',
+        ),
+      ),
+    );
   }
 
   @override
@@ -99,13 +120,17 @@ class _PreviewScreenState extends State<PreviewScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // The photo preview is already full screen (Image.file with fit: BoxFit.cover)
-          ColorFiltered(
-            colorFilter: _filterForName(widget.filterName),
-            child: Image.file(File(widget.imagePath), fit: BoxFit.cover),
+          GestureDetector(
+            onDoubleTap: _showFullScreen,
+            child: Hero(
+              tag: 'preview_image',
+              child: ColorFiltered(
+                colorFilter: _filterForName(widget.filterName),
+                child: Image.file(File(widget.imagePath), fit: BoxFit.cover),
+              ),
+            ),
           ),
           
-          // Top Bar for Share
           Positioned(
             top: 0,
             left: 0,
@@ -120,7 +145,7 @@ class _PreviewScreenState extends State<PreviewScreen> {
                       icon: const Icon(Icons.share, color: Colors.white, size: 28),
                       onPressed: _shareImage,
                       style: IconButton.styleFrom(
-                        backgroundColor: Colors.black38,
+                        backgroundColor: Colors.black.withValues(alpha: 0.38),
                         shape: const CircleBorder(),
                       ),
                     ),
@@ -130,7 +155,6 @@ class _PreviewScreenState extends State<PreviewScreen> {
             ),
           ),
 
-          // Bottom Controls
           Positioned(
             bottom: 0,
             left: 0,
@@ -141,7 +165,7 @@ class _PreviewScreenState extends State<PreviewScreen> {
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
-                  colors: [Colors.black.withOpacity(0.8), Colors.transparent],
+                  colors: [Colors.black.withValues(alpha: 0.8), Colors.transparent],
                 ),
               ),
               child: Row(
@@ -156,7 +180,6 @@ class _PreviewScreenState extends State<PreviewScreen> {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white,
                         side: const BorderSide(color: Colors.white54),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
                       ),
                     ),
                   ),
@@ -166,19 +189,17 @@ class _PreviewScreenState extends State<PreviewScreen> {
                       height: 56,
                       child: FilledButton.icon(
                         onPressed: () {
-                          HapticFeedback.lightImpact();
+                          if (_hapticEnabled) HapticFeedback.lightImpact();
                           Navigator.of(context).pushReplacement(MaterialPageRoute(
                             builder: (context) => EntryDetailScreen(
-                              imagePath: widget.imagePath,
+                              imagePaths: [widget.imagePath],
                               filterName: widget.filterName,
+                              location: widget.location,
                             ),
                           ));
                         },
                         icon: const Icon(Icons.check_circle_outline),
                         label: const Text("Use Photo"),
-                        style: FilledButton.styleFrom(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-                        ),
                       ),
                     ),
                   ),

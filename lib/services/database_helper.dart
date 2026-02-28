@@ -21,7 +21,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'snaplog.db');
     return await openDatabase(
       path,
-      version: 2,
+      version: 3, // Incremented version for new columns
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -37,17 +37,35 @@ class DatabaseHelper {
         )
       ''');
     }
+    if (oldVersion < 3) {
+      // Migrate from single imagePath to imagePaths and add metadata columns
+      await db.execute('ALTER TABLE photo_entries ADD COLUMN location TEXT');
+      await db.execute('ALTER TABLE photo_entries ADD COLUMN tags TEXT');
+      
+      // Rename imagePath to imagePaths if possible, or just add the new one
+      // SQLite doesn't support easy column renaming in older versions, 
+      // so we add the new one and will handle the transition in code.
+      try {
+        await db.execute('ALTER TABLE photo_entries RENAME COLUMN imagePath TO imagePaths');
+      } catch (e) {
+        // Fallback if RENAME COLUMN is not supported
+        await db.execute('ALTER TABLE photo_entries ADD COLUMN imagePaths TEXT');
+        await db.execute('UPDATE photo_entries SET imagePaths = imagePath');
+      }
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
     await db.execute('''
       CREATE TABLE photo_entries(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        imagePath TEXT,
+        imagePaths TEXT,
         caption TEXT,
         mood TEXT,
         filter TEXT,
-        timestamp TEXT
+        timestamp TEXT,
+        location TEXT,
+        tags TEXT
       )
     ''');
     await db.execute('''

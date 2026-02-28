@@ -2,7 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-enum QuizDifficulty { normal, hard }
+enum QuizDifficulty { normal, medium, hard }
 
 class QuizScreen extends StatefulWidget {
   final QuizDifficulty difficulty;
@@ -59,6 +59,31 @@ class _QuizScreenState extends State<QuizScreen> {
           _correctAnswer = (_num1 * _num2) + _num3;
         }
       }
+    } else if (widget.difficulty == QuizDifficulty.medium) {
+      // Medium mode: Multi-digit addition or simple subtraction/multiplication
+      final mode = random.nextInt(3);
+      if (mode == 0) {
+        // Multi-digit addition
+        _num1 = random.nextInt(50) + 20;
+        _num2 = random.nextInt(50) + 20;
+        _operation1 = "+";
+        _operation2 = "";
+        _correctAnswer = _num1 + _num2;
+      } else if (mode == 1) {
+        // Subtraction
+        _num1 = random.nextInt(50) + 30;
+        _num2 = random.nextInt(25) + 5;
+        _operation1 = "-";
+        _operation2 = "";
+        _correctAnswer = _num1 - _num2;
+      } else {
+        // Simple multiplication
+        _num1 = random.nextInt(10) + 3;
+        _num2 = random.nextInt(10) + 3;
+        _operation1 = "×";
+        _operation2 = "";
+        _correctAnswer = _num1 * _num2;
+      }
     } else {
       // Normal mode: two numbers addition
       _num1 = random.nextInt(12) + 1;
@@ -110,6 +135,7 @@ class _QuizScreenState extends State<QuizScreen> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isHard = widget.difficulty == QuizDifficulty.hard;
+    final isMedium = widget.difficulty == QuizDifficulty.medium;
 
     return Scaffold(
       appBar: AppBar(
@@ -130,18 +156,18 @@ class _QuizScreenState extends State<QuizScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: (isHard ? Colors.red : colorScheme.primary).withOpacity(0.1),
+                  color: (isHard ? Colors.red : (isMedium ? Colors.orange : colorScheme.primary)).withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  isHard ? Icons.lock_outline : Icons.psychology_outlined, 
+                  isHard ? Icons.lock_outline : (isMedium ? Icons.shield_outlined : Icons.psychology_outlined), 
                   size: 48, 
-                  color: isHard ? Colors.red : colorScheme.primary
+                  color: isHard ? Colors.red : (isMedium ? Colors.orange : colorScheme.primary)
                 ),
               ),
               const SizedBox(height: 24),
               Text(
-                isHard ? "Critical Verification" : "Security Check",
+                isHard ? "Critical Verification" : (isMedium ? "System Verification" : "Security Check"),
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: colorScheme.onSurface,
@@ -151,7 +177,7 @@ class _QuizScreenState extends State<QuizScreen> {
               Text(
                 isHard 
                   ? "Solve this complex equation to proceed with deletion." 
-                  : "Prove you're human to continue",
+                  : (isMedium ? "Solve this equation to adjust system limits." : "Prove you're human to continue"),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: colorScheme.onSurfaceVariant,
@@ -160,10 +186,10 @@ class _QuizScreenState extends State<QuizScreen> {
               const SizedBox(height: 48),
               FittedBox(
                 child: Text(
-                  isHard ? "($_num1 $_operation1 $_num2) $_operation2 $_num3" : "$_num1 + $_num2",
+                  isHard ? "($_num1 $_operation1 $_num2) $_operation2 $_num3" : "$_num1 $_operation1 $_num2",
                   style: Theme.of(context).textTheme.displayMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: isHard ? Colors.red : colorScheme.primary,
+                    color: isHard ? Colors.red : (isMedium ? Colors.orange : colorScheme.primary),
                   ),
                 ),
               ),
@@ -192,10 +218,10 @@ class _QuizScreenState extends State<QuizScreen> {
                         duration: const Duration(milliseconds: 300),
                         decoration: BoxDecoration(
                           color: isCorrect 
-                              ? Colors.green.withOpacity(0.2)
+                              ? Colors.green.withValues(alpha: 0.2)
                               : isWrong
-                                  ? Colors.red.withOpacity(0.2)
-                                  : colorScheme.surfaceVariant.withOpacity(0.5),
+                                  ? Colors.red.withValues(alpha: 0.2)
+                                  : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
                             color: isCorrect 

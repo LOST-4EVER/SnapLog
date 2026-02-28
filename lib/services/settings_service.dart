@@ -1,60 +1,95 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter/foundation.dart';
 
 class SettingsService {
   static final SettingsService _instance = SettingsService._internal();
-  late SharedPreferences _prefs;
-  bool _initialized = false;
+  SharedPreferences? _prefs;
 
   factory SettingsService() => _instance;
 
   SettingsService._internal();
 
-  Future<void> _ensureInitialized() async {
-    if (!_initialized) {
-      _prefs = await SharedPreferences.getInstance();
-      _initialized = true;
-    }
+  Future<SharedPreferences> get _getPrefs async {
+    _prefs ??= await SharedPreferences.getInstance();
+    return _prefs!;
   }
 
   Future<Map<String, dynamic>> getSettings() async {
-    await _ensureInitialized();
+    final prefs = await _getPrefs;
     return {
-      'dailyLimit': _prefs.getInt('dailyLimit') ?? 3,
-      'enableFlash': _prefs.getBool('enableFlash') ?? false,
-      'defaultFilter': _prefs.getString('defaultFilter') ?? 'Normal',
-      'imageQuality': _prefs.getString('imageQuality') ?? 'High',
+      'dailyLimit': prefs.getInt('dailyLimit') ?? 3,
+      'defaultFilter': prefs.getString('defaultFilter') ?? 'Normal',
+      'imageQuality': prefs.getString('imageQuality') ?? 'High',
+      'remindersEnabled': prefs.getBool('remindersEnabled') ?? false,
+      'reminderTime': prefs.getString('reminderTime') ?? '20:00',
+      'useSystemCamera': prefs.getBool('useSystemCamera') ?? false,
+      'mirrorFrontCamera': prefs.getBool('mirrorFrontCamera') ?? true,
+      'hapticFeedback': prefs.getBool('hapticFeedback') ?? true,
+      'shutterSound': prefs.getBool('shutterSound') ?? true,
     };
   }
 
   Future<void> setDailyLimit(int limit) async {
-    await _ensureInitialized();
-    await _prefs.setInt('dailyLimit', limit);
+    final prefs = await _getPrefs;
+    await prefs.setInt('dailyLimit', limit);
   }
 
   Future<void> setImageQuality(String quality) async {
-    await _ensureInitialized();
-    await _prefs.setString('imageQuality', quality);
+    final prefs = await _getPrefs;
+    await prefs.setString('imageQuality', quality);
   }
 
   Future<void> setDefaultFilter(String filter) async {
-    await _ensureInitialized();
-    await _prefs.setString('defaultFilter', filter);
+    final prefs = await _getPrefs;
+    await prefs.setString('defaultFilter', filter);
   }
 
-  Future<void> clearCache() async {
+  Future<void> setRemindersEnabled(bool enabled) async {
+    final prefs = await _getPrefs;
+    await prefs.setBool('remindersEnabled', enabled);
+  }
+
+  Future<void> setReminderTime(String time) async {
+    final prefs = await _getPrefs;
+    await prefs.setString('reminderTime', time);
+  }
+
+  Future<void> setUseSystemCamera(bool useSystem) async {
+    final prefs = await _getPrefs;
+    await prefs.setBool('useSystemCamera', useSystem);
+  }
+
+  Future<void> setMirrorFrontCamera(bool enabled) async {
+    final prefs = await _getPrefs;
+    await prefs.setBool('mirrorFrontCamera', enabled);
+  }
+
+  Future<void> setHapticFeedback(bool enabled) async {
+    final prefs = await _getPrefs;
+    await prefs.setBool('hapticFeedback', enabled);
+  }
+
+  Future<void> setShutterSound(bool enabled) async {
+    final prefs = await _getPrefs;
+    await prefs.setBool('shutterSound', enabled);
+  }
+
+  Future<bool> clearAppCache() async {
     try {
       final cacheDir = await getTemporaryDirectory();
       if (cacheDir.existsSync()) {
         cacheDir.deleteSync(recursive: true);
       }
+      return true;
     } catch (e) {
-      // Cache clearing failed
+      debugPrint('Cache clearing failed: $e');
+      return false;
     }
   }
 
-  Future<void> resetSettings() async {
-    await _ensureInitialized();
-    await _prefs.clear();
+  Future<void> resetAllSettings() async {
+    final prefs = await _getPrefs;
+    await prefs.clear();
   }
 }
