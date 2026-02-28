@@ -25,10 +25,10 @@ class _StreakBadgeState extends State<StreakBadge> with SingleTickerProviderStat
       vsync: this,
       duration: const Duration(milliseconds: 500),
     );
-    _scaleAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.5), weight: 50),
-      TweenSequenceItem(tween: Tween(begin: 1.5, end: 1.0), weight: 50),
-    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticOut));
+    _scaleAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.elasticOut,
+    );
 
     _notifier = EntriesNotifier();
     _listener = () => _refresh();
@@ -66,8 +66,16 @@ class _StreakBadgeState extends State<StreakBadge> with SingleTickerProviderStat
         final todayCount = snapshot.data?[1] ?? 0;
         final isLit = todayCount > 0 && streak > 0;
 
-        return ScaleTransition(
-          scale: _scaleAnimation,
+        return AnimatedBuilder(
+          animation: _scaleAnimation,
+          builder: (context, child) {
+            // Map 0->1 to 1.0->1.2->1.0 effectively via curve or just a simpler scale
+            double scale = 1.0 + (_scaleAnimation.value * 0.2);
+            return Transform.scale(
+              scale: scale,
+              child: child,
+            );
+          },
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(

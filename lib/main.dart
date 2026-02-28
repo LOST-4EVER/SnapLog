@@ -11,7 +11,7 @@ import 'screens/camera_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/advancements_screen.dart';
-import 'widgets/streak_badge.dart';
+import 'widgets/connected_settings_icon.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -251,7 +251,7 @@ class _MainNavigationState extends State<MainNavigation> {
               FilledButton.icon(
                 onPressed: _checkBiometricLock,
                 icon: const Icon(Icons.fingerprint_rounded),
-                label: const Text("UNLOCK VAULT"),
+                label: const Text("UNLOCK NOW"),
               ),
             ],
           ),
@@ -265,22 +265,21 @@ class _MainNavigationState extends State<MainNavigation> {
         onPageChanged: _onPageChanged,
         physics: const BouncingScrollPhysics(),
         children: [
-          CameraScreen(cameras: widget.cameras, isActive: _selectedIndex == 0),
-          HistoryScreen(onCaptureRequested: () => _onItemTapped(0)),
-          const AdvancementsScreen(),
-          const SettingsScreen(),
+          CameraScreen(key: const ValueKey('camera_screen'), cameras: widget.cameras, isActive: _selectedIndex == 0),
+          HistoryScreen(key: const ValueKey('history_screen'), onCaptureRequested: () => _onItemTapped(0)),
+          const AdvancementsScreen(key: ValueKey('advancements_screen')),
+          const SettingsScreen(key: ValueKey('settings_screen')),
         ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: _onItemTapped,
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.photo_camera_outlined), selectedIcon: Icon(Icons.photo_camera), label: 'Capture'),
-          NavigationDestination(icon: Icon(Icons.auto_awesome_motion_outlined), selectedIcon: Icon(Icons.auto_awesome_motion), label: 'Journal'),
-          NavigationDestination(icon: Icon(Icons.emoji_events_outlined), selectedIcon: Icon(Icons.emoji_events), label: 'Legacy'),
+        destinations: [
+          const NavigationDestination(icon: Icon(Icons.photo_camera_outlined), selectedIcon: Icon(Icons.photo_camera), label: 'Capture'),
+          const NavigationDestination(icon: Icon(Icons.auto_awesome_motion_outlined), selectedIcon: Icon(Icons.auto_awesome_motion), label: 'Journal'),
+          const NavigationDestination(icon: Icon(Icons.emoji_events_outlined), selectedIcon: Icon(Icons.emoji_events), label: 'Legacy'),
           NavigationDestination(
-            icon: Padding(padding: EdgeInsets.only(top: 4), child: StreakBadge(size: 18)),
-            selectedIcon: Padding(padding: EdgeInsets.only(top: 4), child: StreakBadge(size: 18)),
+            icon: ConnectedSettingsIcon(isSelected: _selectedIndex == 3),
             label: 'Elite',
           ),
         ],

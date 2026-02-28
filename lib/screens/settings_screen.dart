@@ -69,6 +69,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _updateHomeWidget();
   }
 
+  void _showRestartDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        title: const Text("Restart Required"),
+        content: const Text("Some changes require an app restart to take full effect for hardware optimization."),
+        actions: [
+          FilledButton(onPressed: () => Navigator.pop(context), child: const Text("GOT IT")),
+        ],
+      ),
+    );
+  }
+
   Future<void> _updateHomeWidget() async {
     final streak = await DatabaseHelper().calculateStreak();
     await HomeWidget.saveWidgetData<int>('streak_count', streak);
@@ -154,6 +168,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _useSystemCamera = value);
     _notifyChange();
     if (_hapticFeedback) HapticFeedback.selectionClick();
+    _showRestartDialog();
   }
 
   Future<void> _toggleHaptics(bool value) async {
@@ -202,9 +217,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          const SliverAppBar.large(
-            title: Text("Preferences"),
+          SliverAppBar.large(
+            title: const Text("Elite Preferences"),
             centerTitle: true,
+            actions: [
+              IconButton(
+                onPressed: _resetToDefaults,
+                icon: const Icon(Icons.refresh_rounded),
+                tooltip: "Reset All Settings",
+              ),
+              const SizedBox(width: 8),
+            ],
           ),
           SliverToBoxAdapter(
             child: Padding(
@@ -215,43 +238,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _buildStreakHero(colorScheme),
                   const SizedBox(height: 24),
                   
-                  const _SectionHeader(title: "Security"),
+                  const _SectionHeader(title: "Privacy Vault"),
                   _buildSettingsCard(
                     children: [
                       SwitchListTile(
                         value: _biometricLock,
                         onChanged: _toggleBiometrics,
-                        secondary: Icon(Icons.fingerprint_rounded, color: colorScheme.primary),
-                        title: const Text("App Lock", style: TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: const Text("Require authentication on launch"),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                        dense: true,
+                        secondary: Icon(Icons.fingerprint_rounded, color: colorScheme.primary, size: 24),
+                        title: const Text("Hardware Lock", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        subtitle: const Text("Use Fingerprint or Face ID"),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       ),
                     ],
                   ),
 
                   const SizedBox(height: 24),
-                  const _SectionHeader(title: "Camera & Capture"),
+                  const _SectionHeader(title: "Hardware & Quality"),
                   _buildSettingsCard(
                     children: [
                       _SettingsTile(
                         icon: Icons.photo_camera_rounded,
-                        title: "Daily Limit",
-                        subtitle: "$_dailyLimit photos / day",
-                        onTap: () => _updateLimit(1),
+                        title: "Daily Snap Limit",
+                        subtitle: "$_dailyLimit photos allowed",
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton.filledTonal(
                               onPressed: () => _updateLimit(-1),
-                              icon: const Icon(Icons.remove, size: 16),
-                              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                              icon: const Icon(Icons.remove, size: 18),
                             ),
                             const SizedBox(width: 8),
                             IconButton.filledTonal(
                               onPressed: () => _updateLimit(1),
-                              icon: const Icon(Icons.add, size: 16),
-                              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                              icon: const Icon(Icons.add, size: 18),
                             ),
                           ],
                         ),
@@ -260,32 +279,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       SwitchListTile(
                         value: _useSystemCamera,
                         onChanged: _toggleSystemCamera,
-                        secondary: Icon(Icons.camera_rounded, color: colorScheme.primary),
-                        title: const Text("Use System Camera", style: TextStyle(fontWeight: FontWeight.w600)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                        dense: true,
+                        secondary: Icon(Icons.settings_input_component_rounded, color: colorScheme.primary, size: 24),
+                        title: const Text("Hardware Integration", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        subtitle: const Text("Direct system camera access"),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       ),
                       const Divider(height: 1, indent: 56, endIndent: 16),
                       _SettingsTile(
                         icon: Icons.high_quality_rounded,
-                        title: "Resolution",
-                        subtitle: _imageQuality,
+                        title: "Master Resolution",
+                        subtitle: "Current: $_imageQuality",
                         onTap: () => _showQualityPicker(),
                       ),
                     ],
                   ),
                   
                   const SizedBox(height: 24),
-                  const _SectionHeader(title: "Interface & Reminders"),
+                  const _SectionHeader(title: "Experience Engine"),
                   _buildSettingsCard(
                     children: [
                       SwitchListTile(
                         value: _remindersEnabled,
                         onChanged: _toggleReminders,
-                        secondary: Icon(Icons.alarm_rounded, color: colorScheme.primary),
-                        title: const Text("Daily Reminders", style: TextStyle(fontWeight: FontWeight.w600)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                        dense: true,
+                        secondary: Icon(Icons.alarm_rounded, color: colorScheme.primary, size: 24),
+                        title: const Text("Daily Reminders", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       ),
                       if (_remindersEnabled) ...[
                         const Divider(height: 1, indent: 56, endIndent: 16),
@@ -300,19 +318,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       SwitchListTile(
                         value: _hapticFeedback,
                         onChanged: _toggleHaptics,
-                        secondary: Icon(Icons.vibration_rounded, color: colorScheme.primary),
-                        title: const Text("Haptic Feedback", style: TextStyle(fontWeight: FontWeight.w600)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                        dense: true,
+                        secondary: Icon(Icons.vibration_rounded, color: colorScheme.primary, size: 24),
+                        title: const Text("Tactile Feedback", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       ),
                       const Divider(height: 1, indent: 56, endIndent: 16),
                       SwitchListTile(
                         value: _shutterSound,
                         onChanged: _toggleShutterSound,
-                        secondary: Icon(Icons.volume_up_rounded, color: colorScheme.primary),
-                        title: const Text("Shutter Sound", style: TextStyle(fontWeight: FontWeight.w600)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                        dense: true,
+                        secondary: Icon(Icons.volume_up_rounded, color: colorScheme.primary, size: 24),
+                        title: const Text("Audio Cues", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       ),
                       const Divider(height: 1, indent: 56, endIndent: 16),
                       SwitchListTile(
@@ -322,30 +338,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           if (mounted) setState(() => _showWidgetOnHome = v);
                           _notifyChange();
                         },
-                        secondary: Icon(Icons.widgets_rounded, color: colorScheme.primary),
-                        title: const Text("Streak Widget", style: TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: const Text("Show on home screen"),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                        dense: true,
+                        secondary: Icon(Icons.widgets_rounded, color: colorScheme.primary, size: 24),
+                        title: const Text("Home Screen Widget", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       ),
                     ],
                   ),
 
                   const SizedBox(height: 24),
-                  const _SectionHeader(title: "Data"),
+                  const _SectionHeader(title: "Data Stewardship"),
                   _buildSettingsCard(
                     color: colorScheme.errorContainer.withValues(alpha: 0.05),
                     children: [
                       _SettingsTile(
-                        icon: Icons.delete_outline_rounded,
-                        title: "Clear Cache",
+                        icon: Icons.cleaning_services_rounded,
+                        title: "Optimize Storage",
+                        subtitle: "Clear temporary artifacts",
                         onTap: () => _clearCache(),
                       ),
                       const Divider(height: 1, indent: 56, endIndent: 16),
                       _SettingsTile(
                         icon: Icons.delete_forever_rounded,
-                        title: "Erase All Data",
+                        title: "Destroy All Memories",
                         textColor: colorScheme.error,
+                        subtitle: "Irreversible data wipeout",
                         onTap: () => _fullReset(),
                       ),
                     ],
@@ -355,15 +371,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Center(
                     child: Column(
                       children: [
-                        const Text("SnapLog Pro", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        const Text("SnapLog Pro", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1)),
                         const SizedBox(height: 2),
-                        const Text("v1.6.0+8", style: TextStyle(fontSize: 11, color: Colors.grey)),
-                        const SizedBox(height: 8),
-                        Text("100% Offline Secure Storage", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: Colors.green.withValues(alpha: 0.8))),
+                        const Text("v1.6.0+8", style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.verified_user_rounded, size: 14, color: Colors.green),
+                              SizedBox(width: 8),
+                              Text("Certified 100% Offline Secure", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.green)),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 100),
+                  const SizedBox(height: 120),
                 ],
               ),
             ),
@@ -375,31 +406,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildStreakHero(ColorScheme colorScheme) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [colorScheme.primaryContainer, colorScheme.primary],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.primary.withValues(alpha: 0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          )
+        ],
       ),
       child: Row(
         children: [
-          const StreakBadge(size: 48),
-          const SizedBox(width: 20),
+          const StreakBadge(size: 60),
+          const SizedBox(width: 24),
           const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "STREAK ACTIVE",
-                  style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w900, letterSpacing: 1.5, fontSize: 10),
+                  "ACTIVE MOMENTUM",
+                  style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 10),
                 ),
-                SizedBox(height: 2),
+                SizedBox(height: 4),
                 Text(
-                  "Keep it up!",
-                  style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                  "Keep it burning!",
+                  style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900),
                 ),
               ],
             ),
@@ -412,10 +450,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildSettingsCard({required List<Widget> children, Color? color}) {
     return Card(
       elevation: 0,
-      margin: const EdgeInsets.symmetric(vertical: 4),
+      margin: const EdgeInsets.symmetric(vertical: 6),
       clipBehavior: Clip.antiAlias,
       color: color ?? Theme.of(context).colorScheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Column(children: children),
     );
   }
@@ -431,17 +469,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             const Padding(
               padding: EdgeInsets.all(24.0),
-              child: Text("Capture Resolution", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20)),
+              child: Text("Master Resolution", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20)),
             ),
             ...options.map((o) => ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 32),
-              title: Text(o, style: const TextStyle(fontWeight: FontWeight.bold)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 4),
+              title: Text(o, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               onTap: () {
                 Navigator.pop(context, o);
                 if (o != _imageQuality) {
                   _settingsService.setImageQuality(o);
                   if (mounted) setState(() => _imageQuality = o);
                   _notifyChange();
+                  _showRestartDialog();
                 }
               },
               trailing: _imageQuality == o ? Icon(Icons.check_circle_rounded, color: Theme.of(context).colorScheme.primary) : null,
@@ -453,22 +492,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Future<void> _resetToDefaults() async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        title: const Text("Reset Preferences?"),
+        content: const Text("This will restore all app settings to their factory defaults. Your journal entries will NOT be affected."),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("CANCEL")),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text("RESET NOW")),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      await _settingsService.resetAllSettings();
+      if (!mounted) return;
+      _loadSettings();
+      _notifyChange();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Preferences reset to default.")));
+      _showRestartDialog();
+    }
+  }
+
   Future<void> _clearCache() async {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        title: const Text("Clear Cache?"),
+        title: const Text("Optimize Storage?"),
+        content: const Text("Clearing cache will remove temporary high-res artifacts. Your saved memories are 100% safe."),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("CANCEL")),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text("CLEAR")),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text("OPTIMIZE")),
         ],
       ),
     );
     if (confirm == true) {
       await _settingsService.clearAppCache();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Cache cleared.")));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Storage optimized.")));
       }
     }
   }
@@ -478,14 +541,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        title: const Text("ERASE ALL DATA?", style: TextStyle(color: Colors.red, fontWeight: FontWeight.w900)),
-        content: const Text("This cannot be undone."),
+        title: const Text("CRITICAL: DATA WIPE?", style: TextStyle(color: Colors.red, fontWeight: FontWeight.w900)),
+        content: const Text("This will destroy all local encrypted memories and history forever. This is irreversible."),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("CANCEL")),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("ABORT")),
           FilledButton(
             onPressed: () => Navigator.pop(context, true), 
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text("ERASE")
+            child: const Text("DESTROY")
           ),
         ],
       ),
@@ -496,7 +559,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!mounted) return;
       _loadSettings();
       _notifyChange();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("App reset to factory state.")));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Factory state restored.")));
     }
   }
 }
@@ -508,13 +571,13 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 0, 8),
+      padding: const EdgeInsets.fromLTRB(12, 12, 0, 8),
       child: Text(
         title.toUpperCase(),
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w900,
-          letterSpacing: 1.5,
+          letterSpacing: 2,
           color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
         ),
       ),
@@ -544,18 +607,17 @@ class _SettingsTile extends StatelessWidget {
     return ListTile(
       onTap: onTap,
       leading: Container(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 18),
+        child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 20),
       ),
-      title: Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: textColor, fontSize: 14)),
-      subtitle: subtitle != null ? Text(subtitle!, style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.8))) : null,
-      trailing: trailing ?? (onTap != null ? const Icon(Icons.chevron_right_rounded, size: 18) : null),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-      dense: true,
+      title: Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: textColor, fontSize: 16)),
+      subtitle: subtitle != null ? Text(subtitle!, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.8))) : null,
+      trailing: trailing ?? (onTap != null ? const Icon(Icons.chevron_right_rounded, size: 20) : null),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     );
   }
 }
