@@ -485,7 +485,7 @@ class OnThisDayCard extends StatelessWidget {
                   shape: BoxShape.circle,
                   boxShadow: [BoxShadow(color: colorScheme.primary.withValues(alpha: 0.3), blurRadius: 10)]
                 ),
-                child: const Icon(Icons.auto_awesome_history_rounded, color: Colors.white, size: 20),
+                child: Icon(Icons.history_toggle_off_rounded, color: Colors.white, size: 20),
               ),
               const SizedBox(width: 16),
               Text(
