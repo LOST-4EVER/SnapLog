@@ -63,7 +63,7 @@ lib/
 
 1. **Clone & Install**:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/LOST-4EVER/SnapLog.git
    flutter pub get
    ```
 2. **Run**:
