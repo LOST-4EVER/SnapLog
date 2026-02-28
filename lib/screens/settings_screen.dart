@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:local_auth/local_auth.dart';
 import '../services/database_helper.dart';
 import '../services/settings_service.dart';
 import '../services/notification_service.dart';
 import '../services/entries_notifier.dart';
+import '../widgets/streak_badge.dart';
 import 'quiz_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -17,6 +19,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final SettingsService _settingsService = SettingsService();
   final NotificationService _notificationService = NotificationService();
+  final LocalAuthentication _auth = LocalAuthentication();
   
   int _dailyLimit = 3;
   String _imageQuality = 'High';
@@ -26,9 +29,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _mirrorFrontCamera = true;
   bool _hapticFeedback = true;
   bool _shutterSound = true;
+  bool _biometricLock = false;
   TimeOfDay _reminderTime = const TimeOfDay(hour: 20, minute: 0);
   
-  late Future<int> _streakFuture;
   bool _isLoading = true;
 
   @override
@@ -53,8 +56,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _mirrorFrontCamera = settings['mirrorFrontCamera'] ?? true;
         _hapticFeedback = settings['hapticFeedback'] ?? true;
         _shutterSound = settings['shutterSound'] ?? true;
+        _biometricLock = settings['biometricLock'] ?? false;
         _reminderTime = TimeOfDay(hour: int.parse(timeParts[0]), minute: int.parse(timeParts[1]));
-        _streakFuture = DatabaseHelper().calculateStreak();
         _isLoading = false;
       });
     } catch (e) {
@@ -105,6 +108,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _remindersEnabled = value);
     _notifyChange();
     if (_hapticFeedback) HapticFeedback.lightImpact();
+  }
+
+  Future<void> _toggleBiometrics(bool value) async {
+    if (value) {
+      final bool canAuthenticateWithBiometrics = await _auth.canCheckBiometrics;
+      final bool canAuthenticate = canAuthenticateWithBiometrics || await _auth.isDeviceSupported();
+      
+      if (!canAuthenticate) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Biometrics not available on this device")),
+          );
+        }
+        return;
+      }
+
+      try {
+        final bool authenticated = await _auth.authenticate(
+          localizedReason: 'Please authenticate to enable biometric lock',
+          options: const AuthenticationOptions(stickyAuth: true, biometricOnly: true),
+        );
+        if (!authenticated) return;
+      } catch (e) {
+        return;
+      }
+    }
+
+    await _settingsService.setBiometricLock(value);
+    if (!mounted) return;
+    setState(() => _biometricLock = value);
+    _notifyChange();
+    if (_hapticFeedback) HapticFeedback.selectionClick();
   }
 
   Future<void> _toggleSystemCamera(bool value) async {
@@ -178,7 +213,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildStreakCard(colorScheme),
+                  _buildStreakHero(colorScheme),
+                  const SizedBox(height: 32),
+                  const _SectionHeader(title: "Security & Privacy"),
+                  const SizedBox(height: 12),
+                  _buildSettingsCard(
+                    children: [
+                      SwitchListTile(
+                        value: _biometricLock,
+                        onChanged: _toggleBiometrics,
+                        secondary: Icon(Icons.fingerprint_rounded, color: colorScheme.primary),
+                        title: const Text("Biometric Lock", style: TextStyle(fontWeight: FontWeight.w500)),
+                        subtitle: const Text("Unlock app with Fingerprint/Face ID"),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 32),
                   const _SectionHeader(title: "Capture Preferences"),
                   const SizedBox(height: 12),
@@ -350,7 +400,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       children: [
                         Text("SnapLog Pro", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                         SizedBox(height: 4),
-                        Text("v1.3.0+5", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        Text("v1.5.0+7", style: TextStyle(fontSize: 12, color: Colors.grey)),
                         SizedBox(height: 8),
                         Text("Crafted with Passion & AI", style: TextStyle(fontSize: 10, fontStyle: FontStyle.italic)),
                       ],
@@ -366,19 +416,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildStreakCard(ColorScheme colorScheme) {
+  Widget _buildStreakHero(ColorScheme colorScheme) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [colorScheme.primary, colorScheme.primary.withValues(alpha: 0.8)],
+          colors: [colorScheme.primary, colorScheme.primaryContainer],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: colorScheme.primary.withValues(alpha: 0.3),
+            color: colorScheme.primary.withValues(alpha: 0.2),
             blurRadius: 20,
             offset: const Offset(0, 10),
           )
@@ -386,36 +436,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.local_fire_department, color: Colors.orangeAccent, size: 48),
-          ),
-          const SizedBox(width: 20),
+          const StreakBadge(size: 64),
+          const SizedBox(width: 24),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  "Current Streak",
-                  style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w500),
+                  "Journaling Streak",
+                  style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600, letterSpacing: 1),
                 ),
-                FutureBuilder<int>(
-                  future: _streakFuture,
-                  builder: (context, snapshot) {
-                    final streak = snapshot.data ?? 0;
-                    return Text(
-                      "$streak Days",
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    );
-                  },
+                const SizedBox(height: 4),
+                const Text(
+                  "Keep it burning!",
+                  style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900),
                 ),
               ],
             ),
@@ -621,3 +655,4 @@ class _SettingsTile extends StatelessWidget {
     );
   }
 }
+

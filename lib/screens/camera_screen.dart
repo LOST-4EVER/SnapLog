@@ -157,11 +157,11 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       _initializeControllerFuture = controller.initialize();
       await _initializeControllerFuture;
       
-      _minExposure = await controller.getMinExposureOffset();
-      _maxExposure = await controller.getMaxExposureOffset();
-      
-      await controller.setExposureMode(ExposureMode.auto);
-      await controller.setFocusMode(FocusMode.auto);
+      // Optimization: Lock focus and exposure for better stability
+      if (controller.value.isInitialized) {
+        await controller.setExposureMode(ExposureMode.auto);
+        await controller.setFocusMode(FocusMode.auto);
+      }
       
       await controller.setFlashMode(_flashMode);
       if (mounted) {

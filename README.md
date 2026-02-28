@@ -2,56 +2,56 @@
 
 **SnapLog Pro** is a high-performance, professional-grade daily photo-journaling application. It combines minimalist Material 3 design with mindful constraints to help you capture, track, and organize your life's journey with precision and style.
 
-## 🚀 What's New (v1.3.0+5) - The "Synchronized Legacy" Update
+## 🚀 What's New (v1.5.0+7) - The "Aesthetic Memoir" Update
 
-- **🏆 Legacy & Badges**: A completely revamped achievement system. Track your progress simultaneously with your journal entries. Includes a new **Milestones** tab to see exactly what challenge is next.
-- **⚡ Pro-Lazy Camera**: Significant performance boost. The camera hardware now only initializes when the Capture tab is active and disposes instantly when switching, saving battery and memory.
-- **🔄 Simultaneous Sync**: All tabs (Capture, Journal, Achievements, Settings) now work in perfect harmony. A photo taken in the camera instantly updates your journal and unlocks badges in real-time.
-- **🛡️ Enhanced Security**: Quizzes are now more dynamic and integrated with system haptics. Critical actions are protected by varying difficulty levels.
-- **📱 Modern UI Revamp**: Cleaned up every screen with better spacing, consistent Material 3 styling, and a new **Community** section in Settings.
-- **📝 Optimized Journal**: Improved "Empty State" with direct navigation to the camera and smoother grid transitions.
+- **✨ Subtle Micro-interactions**: Added spring-scale animations to cards and grid items for a more tactile, premium feel.
+- **📖 Journal Archive Revamp**: A completely redesigned Journal tab with smoother transitions, better typography, and an "Animated Switcher" for seamless view mode changes.
+- **✍️ Glassmorphic Memoir Editor**: Revamped the caption editing experience with a glassmorphic design and smoother "Animated Switcher" transitions between display and edit modes.
+- **🛡️ Elite Security**: Integrated Biometric Lock (Fingerprint/Face ID) to keep your memories truly private.
+- **🗺️ Memory Map**: Visualize your journey on an interactive globe. Every photo with location data is now plotted on your personal memory map.
+- **🔥 Snapstreak Optimization**: The streak icon now "lights up" and animates the moment you capture your first photo of the day.
+- **⚡ Pro-Lazy Camera 2.0**: Further optimized camera initialization and memory cleanup for maximum battery efficiency.
 
 ## 🌟 Key Features
 
 - **🏆 Achievement System**: 25+ unlockable badges based on streaks, mood variety, and consistency.
 - **🎨 Live Viewfinder Filters**: Apply professional filters (B&W, Sepia, Cool, Warm) directly on the camera preview.
 - **📊 Smart History & Archives**: 
-  - **Dynamic Views**: Day, Month, and Year grid modes.
-  - **On This Day**: Auto-surfacing memories from previous years.
-  - **Mood Trends**: Visualize your emotional journey with integrated charts.
+  - **Dynamic Views**: Memoir, Mosaic, and Glimpse modes.
+  - **Timeless Echoes**: Auto-surfacing memories from previous years.
+  - **Emotional Pulse**: Visualize your emotional journey with integrated charts.
 - **📸 Pro Camera Controls**: 
-  - Smooth digital zoom and multi-mode flash (including Torch).
+  - Max-quality capture with battery-efficient previews.
+  - Smooth digital zoom and multi-mode flash.
   - Exposure compensation slider for perfect lighting.
-  - **System Camera Toggle**: Use your phone's native high-end hardware for maximum AI processing.
 - **🧠 Mindfulness & Security**:
-  - **Daily Limits**: Set a limit (1-10 photos) to encourage intentional photography.
-  - **Security Quizzes**: Math challenges protect your memories from accidental deletion or limit changes.
+  - **Biometric Lock**: Secure your data with device-level authentication.
+  - **Security Quizzes**: Math challenges protect critical actions.
 - **🎙️ Speech-to-Text**: Record your thoughts instantly using integrated voice-to-caption technology.
-- **📝 Rich Journaling**:
-  - 24+ Mood tracking emojis.
-  - Auto-location tagging and editable captions.
 
 ## 🛠️ Technical Stack
 
 - **Framework**: Flutter (Material 3)
 - **Storage**: SQLite (sqflite) for local data persistence.
-- **Image Processing**: `flutter_image_compress` for 70%+ storage reduction without quality loss.
-- **Optimization**: Lazy decoding (`cacheWidth`/`cacheHeight`) and **Lazy Camera Initialization** for a minimal memory footprint.
-- **State Management**: Reactive `ChangeNotifier` pattern for simultaneous updates across all screens.
+- **Authentication**: `local_auth` for Biometric security.
+- **Maps**: `google_maps_flutter` for memory visualization.
+- **Optimization**: Lazy decoding and **Lazy Camera Initialization**.
 
 ## 🏗️ Project Structure
 
 ```
 lib/
 ├── main.dart                    # M3 Theme & Tab Navigation
-├── widgets/                     # Reusable UI components (New!)
-│   ├── entry_widgets.dart       # Journal cards & modals
-│   └── mood_selector.dart       # Animated mood tracker
+├── widgets/                     # Reusable UI components
+│   ├── entry_widgets.dart       # Enhanced Cards & Modals
+│   ├── mood_selector.dart       # Animated mood tracker
+│   └── streak_badge.dart        # Reactive Snapstreak icon
 ├── screens/
-│   ├── camera_screen.dart       # Lazy-loading viewfinder
-│   ├── history_screen.dart      # Journal & grid modes
-│   ├── advancements_screen.dart # Legacy & Badges (Revamped)
-│   ├── settings_screen.dart     # Pro Preferences & Community
+│   ├── camera_screen.dart       # Pro Viewfinder
+│   ├── history_screen.dart      # Revamped Journal
+│   ├── map_screen.dart          # Memory Map
+│   ├── advancements_screen.dart # Legacy & Badges
+│   ├── settings_screen.dart     # Pro Preferences
 │   └── quiz_screen.dart         # Security challenge system
 └── services/
     ├── database_helper.dart     # DB Operations
@@ -74,4 +74,4 @@ lib/
 ---
 
 **developed by LOSY-4EVER ❤️ with Ai**  
-*v1.3.0+5 - Synchronized Legacy Edition*
+*v1.5.0+7 - Aesthetic Memoir Edition*

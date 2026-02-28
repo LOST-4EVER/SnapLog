@@ -27,6 +27,7 @@ class SettingsService {
       'mirrorFrontCamera': prefs.getBool('mirrorFrontCamera') ?? true,
       'hapticFeedback': prefs.getBool('hapticFeedback') ?? true,
       'shutterSound': prefs.getBool('shutterSound') ?? true,
+      'biometricLock': prefs.getBool('biometricLock') ?? false,
       'shareCount': prefs.getInt('shareCount') ?? 0,
       'editCount': prefs.getInt('editCount') ?? 0,
       'settingsChangeCount': prefs.getInt('settingsChangeCount') ?? 0,
@@ -86,6 +87,12 @@ class SettingsService {
   Future<void> setShutterSound(bool enabled) async {
     final prefs = await _getPrefs;
     await prefs.setBool('shutterSound', enabled);
+    await trackEvent('settingsChangeCount');
+  }
+
+  Future<void> setBiometricLock(bool enabled) async {
+    final prefs = await _getPrefs;
+    await prefs.setBool('biometricLock', enabled);
     await trackEvent('settingsChangeCount');
   }
 

@@ -2,19 +2,21 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:quick_actions/quick_actions.dart';
+import 'package:local_auth/local_auth.dart';
 import 'services/entries_notifier.dart';
 import 'services/notification_service.dart';
 import 'services/achievement_service.dart';
+import 'services/settings_service.dart';
 import 'screens/camera_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/advancements_screen.dart';
+import 'widgets/streak_badge.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService().init();
   
-  // Initialize achievement states to prevent old popups
   await AchievementService().initNotificationState();
   
   final cameras = await availableCameras();
@@ -136,8 +138,10 @@ class _MainNavigationState extends State<MainNavigation> {
   late PageController _pageController;
   late List<Widget> _screens;
   final QuickActions _quickActions = const QuickActions();
+  final LocalAuthentication _auth = LocalAuthentication();
   late final EntriesNotifier _notifier;
   late final VoidCallback _notifierListener;
+  bool _isLocked = true;
 
   @override
   void initState() {
@@ -151,14 +155,35 @@ class _MainNavigationState extends State<MainNavigation> {
     ];
 
     _initQuickActions();
+    _checkBiometricLock();
     
-    // Listen for changes to trigger achievement checks
     _notifier = EntriesNotifier();
     _notifierListener = () => _checkAchievements();
     _notifier.addListener(_notifierListener);
     
-    // Initial check
     WidgetsBinding.instance.addPostFrameCallback((_) => _checkAchievements());
+  }
+
+  Future<void> _checkBiometricLock() async {
+    final settings = await SettingsService().getSettings();
+    final bool biometricEnabled = settings['biometricLock'] ?? false;
+    
+    if (!biometricEnabled) {
+      if (mounted) setState(() => _isLocked = false);
+      return;
+    }
+
+    try {
+      final bool authenticated = await _auth.authenticate(
+        localizedReason: 'Please authenticate to access SnapLog Pro',
+        options: const AuthenticationOptions(stickyAuth: true),
+      );
+      if (authenticated) {
+        if (mounted) setState(() => _isLocked = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLocked = false);
+    }
   }
 
   Future<void> _checkAchievements() async {
@@ -262,6 +287,27 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLocked) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.lock_outline, size: 80, color: Colors.grey),
+              const SizedBox(height: 24),
+              const Text("SnapLog Pro is Locked", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 32),
+              FilledButton.icon(
+                onPressed: _checkBiometricLock,
+                icon: const Icon(Icons.fingerprint),
+                label: const Text("UNLOCK NOW"),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       body: PageView(
         controller: _pageController,
@@ -289,8 +335,14 @@ class _MainNavigationState extends State<MainNavigation> {
             label: 'Achievements',
           ),
           NavigationDestination(
-            icon: Icon(Icons.tune_outlined),
-            selectedIcon: Icon(Icons.tune),
+            icon: Padding(
+              padding: EdgeInsets.only(top: 4),
+              child: StreakBadge(size: 20),
+            ),
+            selectedIcon: Padding(
+              padding: EdgeInsets.only(top: 4),
+              child: StreakBadge(size: 20),
+            ),
             label: 'Settings',
           ),
         ],

@@ -7,6 +7,7 @@ import '../services/entries_notifier.dart';
 import '../services/settings_service.dart';
 import '../services/insights_service.dart';
 import '../widgets/entry_widgets.dart';
+import 'map_screen.dart';
 
 enum ViewMode { day, month, year }
 
@@ -36,9 +37,9 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 1000),
     );
-    _fadeAnimation = CurvedAnimation(parent: _animationController, curve: Curves.easeIn);
+    _fadeAnimation = CurvedAnimation(parent: _animationController, curve: Curves.easeOutQuart);
     _notifier = EntriesNotifier();
     _notifier.addListener(_refreshEntries);
     _refreshEntries();
@@ -90,28 +91,36 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
     return Scaffold(
       backgroundColor: colorScheme.surface,
       body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar.medium(
-            title: const Text("Journal"),
+            title: const Text("Journal Archive"),
             centerTitle: true,
             actions: [
               IconButton(
-                icon: Icon(_showInsights ? Icons.bar_chart : Icons.bar_chart_outlined),
+                icon: const Icon(Icons.map_rounded),
+                onPressed: () {
+                  if (_hapticEnabled) HapticFeedback.lightImpact();
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const MapScreen()));
+                },
+              ),
+              IconButton(
+                icon: Icon(_showInsights ? Icons.insights_rounded : Icons.insights_outlined),
                 onPressed: () {
                   if (_hapticEnabled) HapticFeedback.selectionClick();
                   setState(() => _showInsights = !_showInsights);
                 },
               ),
               PopupMenuButton<ViewMode>(
-                icon: const Icon(Icons.grid_view_outlined),
+                icon: const Icon(Icons.tune_rounded),
                 onSelected: (ViewMode mode) {
                   if (_hapticEnabled) HapticFeedback.selectionClick();
                   setState(() => _viewMode = mode);
                 },
                 itemBuilder: (context) => [
-                  const PopupMenuItem(value: ViewMode.day, child: Text("Daily View")),
-                  const PopupMenuItem(value: ViewMode.month, child: Text("Monthly Grid")),
-                  const PopupMenuItem(value: ViewMode.year, child: Text("Yearly Grid")),
+                  const PopupMenuItem(value: ViewMode.day, child: Text("Memoir View")),
+                  const PopupMenuItem(value: ViewMode.month, child: Text("Monthly Mosaic")),
+                  const PopupMenuItem(value: ViewMode.year, child: Text("Yearly Glimpse")),
                 ],
               ),
             ],
@@ -122,12 +131,12 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
               child: SearchBar(
                 controller: _searchController,
                 onChanged: (value) => setState(() => _searchQuery = value),
-                hintText: "Search captions, locations...",
-                leading: const Icon(Icons.search),
+                hintText: "Search your timeline...",
+                leading: const Icon(Icons.search_rounded),
                 trailing: [
                   if (_searchQuery.isNotEmpty)
                     IconButton(
-                      icon: const Icon(Icons.clear),
+                      icon: const Icon(Icons.close_rounded),
                       onPressed: () {
                         if (_hapticEnabled) HapticFeedback.lightImpact();
                         _searchController.clear();
@@ -137,8 +146,8 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
                 ],
                 elevation: const WidgetStatePropertyAll(0),
                 backgroundColor: WidgetStatePropertyAll(colorScheme.surfaceContainerHighest.withValues(alpha: 0.4)),
-                padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 16)),
-                shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 20)),
+                shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
               ),
             ),
           ),
@@ -172,9 +181,9 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.search_off, size: 64, color: colorScheme.outlineVariant),
-                        const SizedBox(height: 16),
-                        const Text("No matches found for your search."),
+                        Icon(Icons.search_off_rounded, size: 80, color: colorScheme.outlineVariant),
+                        const SizedBox(height: 24),
+                        Text("No fragments match your query.", style: TextStyle(color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500)),
                       ],
                     ),
                   ),
@@ -184,7 +193,7 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
               return _buildGallery(filteredEntries);
             },
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
+          const SliverToBoxAdapter(child: SizedBox(height: 120)),
         ],
       ),
     );
@@ -194,24 +203,30 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(32),
         border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Mood Trends", style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text("Emotional Pulse", style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
+              Icon(Icons.auto_awesome_rounded, size: 16, color: colorScheme.primary.withValues(alpha: 0.5)),
+            ],
+          ),
+          const SizedBox(height: 32),
           SizedBox(
-            height: 180,
+            height: 200,
             child: FutureBuilder<List<MoodData>>(
               future: _moodTrendsFuture,
               builder: (context, snapshot) {
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text("Not enough data for insights yet"));
+                  return const Center(child: Text("Continuing the journey..."));
                 }
                 final data = snapshot.data!;
                 return LineChart(
@@ -226,7 +241,10 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
                           showTitles: true,
                           getTitlesWidget: (value, meta) {
                             if (value.toInt() >= 0 && value.toInt() < data.length) {
-                              return Text(data[value.toInt()].date, style: const TextStyle(fontSize: 10));
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 8.0),
+                                child: Text(data[value.toInt()].date, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey)),
+                              );
                             }
                             return const Text("");
                           },
@@ -238,12 +256,26 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
                       LineChartBarData(
                         spots: data.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.score)).toList(),
                         isCurved: true,
+                        curveSmoothness: 0.4,
                         color: colorScheme.primary,
-                        barWidth: 4,
-                        dotData: const FlDotData(show: false),
+                        barWidth: 6,
+                        isStrokeCapRound: true,
+                        dotData: FlDotData(
+                          show: true,
+                          getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+                            radius: 4,
+                            color: Colors.white,
+                            strokeWidth: 3,
+                            strokeColor: colorScheme.primary,
+                          ),
+                        ),
                         belowBarData: BarAreaData(
                           show: true,
-                          color: colorScheme.primary.withValues(alpha: 0.1),
+                          gradient: LinearGradient(
+                            colors: [colorScheme.primary.withValues(alpha: 0.2), colorScheme.primary.withValues(alpha: 0.0)],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
                         ),
                       ),
                     ],
@@ -269,7 +301,10 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
         }
         return FadeTransition(
           opacity: _fadeAnimation,
-          child: OnThisDayCard(entries: snapshot.data!),
+          child: SlideTransition(
+            position: Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(_fadeAnimation),
+            child: OnThisDayCard(entries: snapshot.data!),
+          ),
         );
       },
     );
@@ -282,25 +317,29 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(32),
+            padding: const EdgeInsets.all(40),
             decoration: BoxDecoration(
-              color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+              gradient: LinearGradient(colors: [colorScheme.primaryContainer, colorScheme.surface]),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.auto_awesome_motion, size: 64, color: colorScheme.primary),
+            child: Icon(Icons.auto_awesome_rounded, size: 80, color: colorScheme.primary),
           ),
-          const SizedBox(height: 24),
-          const Text("Your journal is empty", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          Text("Capture moments to see them here", style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 16)),
           const SizedBox(height: 32),
+          const Text("The First Page is Blank", style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, letterSpacing: -1)),
+          const SizedBox(height: 12),
+          Text("Begin your story today.", style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 16, fontWeight: FontWeight.w500)),
+          const SizedBox(height: 48),
           FilledButton.icon(
             onPressed: () {
                if (_hapticEnabled) HapticFeedback.mediumImpact();
                widget.onCaptureRequested?.call();
             },
-            icon: const Icon(Icons.photo_camera),
-            label: const Text("Capture Your First Moment"),
+            icon: const Icon(Icons.photo_camera_rounded),
+            label: const Text("CAPTURE A MOMENT"),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            ),
           ),
         ],
       ),
@@ -308,44 +347,50 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
   }
 
   Widget _buildGallery(List<PhotoEntry> entries) {
-    switch (_viewMode) {
-      case ViewMode.day:
-        return SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          sliver: SliverList.separated(
-            separatorBuilder: (context, index) => const SizedBox(height: 20),
-            itemCount: entries.length,
-            itemBuilder: (context, index) => EntryCard(entry: entries[index], onRefresh: _refreshEntries, hapticEnabled: _hapticEnabled),
-          ),
-        );
-      case ViewMode.month:
-        return SliverPadding(
-          padding: const EdgeInsets.all(12),
-          sliver: SliverGrid.builder(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3, 
-              crossAxisSpacing: 12, 
-              mainAxisSpacing: 12,
-              childAspectRatio: 1,
-            ),
-            itemCount: entries.length,
-            itemBuilder: (context, index) => GridItem(entry: entries[index], onRefresh: _refreshEntries, hapticEnabled: _hapticEnabled),
-          ),
-        );
-      case ViewMode.year:
-        return SliverPadding(
-          padding: const EdgeInsets.all(8),
-          sliver: SliverGrid.builder(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 5, 
-              crossAxisSpacing: 8, 
-              mainAxisSpacing: 8,
-              childAspectRatio: 1,
-            ),
-            itemCount: entries.length,
-            itemBuilder: (context, index) => GridItem(entry: entries[index], showDetails: false, onRefresh: _refreshEntries, hapticEnabled: _hapticEnabled),
-          ),
-        );
-    }
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 500),
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: animation,
+        child: SlideTransition(
+          position: Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero).animate(animation),
+          child: child,
+        ),
+      ),
+      child: _viewMode == ViewMode.day 
+        ? _buildMemoirList(entries) 
+        : _buildMosaicGrid(entries, _viewMode == ViewMode.month ? 3 : 5),
+    );
+  }
+
+  Widget _buildMemoirList(List<PhotoEntry> entries) {
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      sliver: SliverList.separated(
+        separatorBuilder: (context, index) => const SizedBox(height: 24),
+        itemCount: entries.length,
+        itemBuilder: (context, index) => EntryCard(entry: entries[index], onRefresh: _refreshEntries, hapticEnabled: _hapticEnabled),
+      ),
+    );
+  }
+
+  Widget _buildMosaicGrid(List<PhotoEntry> entries, int crossAxisCount) {
+    return SliverPadding(
+      padding: const EdgeInsets.all(16),
+      sliver: SliverGrid.builder(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: crossAxisCount, 
+          crossAxisSpacing: 12, 
+          mainAxisSpacing: 12,
+          childAspectRatio: 1,
+        ),
+        itemCount: entries.length,
+        itemBuilder: (context, index) => GridItem(
+          entry: entries[index], 
+          showDetails: crossAxisCount < 5,
+          onRefresh: _refreshEntries, 
+          hapticEnabled: _hapticEnabled
+        ),
+      ),
+    );
   }
 }
