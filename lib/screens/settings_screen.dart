@@ -238,7 +238,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         icon: Icons.photo_camera_rounded,
                         title: "Daily Limit",
                         subtitle: "$_dailyLimit photos / day",
-                        onTap: () => _updateLimit(1), // Quick tap to increase? Or open dialog.
+                        onTap: () => _updateLimit(1),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -276,9 +276,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   
                   const SizedBox(height: 24),
-                  const _SectionHeader(title: "Interface"),
+                  const _SectionHeader(title: "Interface & Reminders"),
                   _buildSettingsCard(
                     children: [
+                      SwitchListTile(
+                        value: _remindersEnabled,
+                        onChanged: _toggleReminders,
+                        secondary: Icon(Icons.alarm_rounded, color: colorScheme.primary),
+                        title: const Text("Daily Reminders", style: TextStyle(fontWeight: FontWeight.w600)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                        dense: true,
+                      ),
+                      if (_remindersEnabled) ...[
+                        const Divider(height: 1, indent: 56, endIndent: 16),
+                        _SettingsTile(
+                          icon: Icons.schedule_rounded,
+                          title: "Reminder Time",
+                          subtitle: _reminderTime.format(context),
+                          onTap: _selectTime,
+                        ),
+                      ],
+                      const Divider(height: 1, indent: 56, endIndent: 16),
                       SwitchListTile(
                         value: _hapticFeedback,
                         onChanged: _toggleHaptics,
@@ -334,14 +352,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
 
                   const SizedBox(height: 48),
-                  const Center(
+                  Center(
                     child: Column(
                       children: [
-                        Text("SnapLog Pro", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                        SizedBox(height: 2),
-                        Text("v1.6.0+8", style: TextStyle(fontSize: 11, color: Colors.grey)),
-                        SizedBox(height: 8),
-                        Text("100% Offline Secure Storage", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: Colors.green)),
+                        const Text("SnapLog Pro", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 2),
+                        const Text("v1.6.0+8", style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        const SizedBox(height: 8),
+                        Text("100% Offline Secure Storage", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: Colors.green.withValues(alpha: 0.8))),
                       ],
                     ),
                   ),

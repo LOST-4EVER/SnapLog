@@ -2,78 +2,44 @@
 
 **SnapLog Pro** is a high-performance, **100% Offline-Capable**, professional-grade daily photo-journaling application. It combines minimalist Material 3 design with mindful constraints to help you capture, track, and organize your life's journey with precision and style.
 
-## 🚀 What's New (v1.6.0+8) - The "Control & Momentum" Update
+## 🚀 What's New (v1.6.0+8) - The "Offline Elite" Update
 
-- **📱 Android Home Widget**: Keep your journaling momentum front and center. Sync your Elite Streak directly to your Android home screen with the new reactive widget.
-- **⚙️ Elite Control Center**: Completely revamped Settings tab. Organized into Pro categories like "Capture System" and "Tactile Engine" for a smoother configuration experience.
-- **✨ Subtle Micro-interactions**: Smooth spring-scale animations on cards and grids for a more tactile, premium feel.
-- **📖 Journal Archive 2.0**: Redesigned Journal tab with high-end typography, smoother transitions, and an "Animated Switcher" for seamless view mode changes.
-- **🛡️ Google-Verified Local Security**: 
-  - Integrated **Biometric Encryption** (Fingerprint/Face ID).
-  - Disabled cleartext traffic for maximum data safety.
-  - Certified Encrypted Local Storage (No cloud leaks).
-- **🗺️ Memory Map**: Visualize your journey on an interactive globe. Every photo with location data is now plotted on your personal memory map.
-- **⚡ Pro-Lazy Camera 2.5**: Final optimizations for camera initialization and memory cleanup, ensuring the fastest load times in its class.
+- **📶 100% Offline-First Design**: No internet? No problem. Every feature from AI-style filters to secure storage works perfectly without any connection.
+- **🛡️ Secure Vault Integration**: 
+  - **Biometric Encryption**: (New!) Opt-in for hardware-level security (Fingerprint/Face ID) to lock your memories.
+  - **Offline Security**: Math quizzes protect critical actions without ever pinging a server.
+- **⚙️ Redesigned Preference Center**: A cleaner, more condensed settings interface grouped into professional categories.
+- **📸 Ergonomic Camera**: Re-balanced viewfinder controls for a more natural one-handed experience.
+- **✨ Premium Fluidity**: Micro-animations and spring-scale interactions throughout the interface.
+- **📱 Android Streak Widget**: Sync your journaling momentum directly to your home screen.
 
 ## 🌟 Key Features
 
-- **🏆 Achievement System**: 25+ unlockable badges based on streaks, mood variety, and consistency.
-- **🎨 Live Viewfinder Filters**: Apply professional filters (B&W, Sepia, Cool, Warm) directly on the camera preview.
-- **📊 Smart History & Archives**: 
-  - **Dynamic Views**: Memoir, Mosaic, and Glimpse modes.
-  - **Timeless Echoes**: Auto-surfacing memories from previous years.
-  - **Emotional Pulse**: Visualize your emotional journey with integrated charts.
-- **📸 Pro Camera Controls**: 
-  - Max-quality capture with battery-efficient previews.
-  - Exposure compensation slider for perfect lighting.
-- **🧠 Mindfulness & Security**:
-  - **Biometric Lock**: Secure your data with device-level authentication.
-  - **Security Quizzes**: Math challenges protect critical actions.
-- **📶 Offline-First Design**:
-  - **No Internet Required**: All features (Journal, Camera, Storage, Statistics) work perfectly without a connection.
-  - **Private**: Your data never leaves your device unless you choose to share it.
-
-## 🛠️ Technical Stack
-
-- **Framework**: Flutter (Material 3)
-- **Storage**: SQLite (sqflite) for local data persistence.
-- **Authentication**: `local_auth` for Biometric security.
-- **Widgets**: `home_widget` for Android Home integration.
-- **Maps**: `google_maps_flutter` for memory visualization.
+- **🏆 Legacy System**: 25+ unlockable badges based on streaks and consistency.
+- **🎨 Pro Viewfinder**: Real-time professional filters (B&W, Sepia, Cool, Warm).
+- **📊 Smart Archive**: Dynamic Day, Month, and Year views with integrated Mood Trends.
+- **📸 High-End Capture**: Max-quality hardware integration with battery-efficient previews.
+- **🧠 Intentionally Private**: Your data never leaves your device. No cloud, no trackers, no leaks.
 
 ## 🏗️ Project Structure
 
 ```
 lib/
-├── main.dart                    # M3 Theme & Tab Navigation
-├── widgets/                     # Reusable UI components
+├── main.dart                    # M3 Theme & Background Init
+├── widgets/                     # Reusable Pro UI components
 │   ├── entry_widgets.dart       # Enhanced Cards & Modals
-│   ├── mood_selector.dart       # Animated mood tracker
 │   └── streak_badge.dart        # Reactive Snapstreak icon
 ├── screens/
-│   ├── camera_screen.dart       # Pro Viewfinder
+│   ├── camera_screen.dart       # Ergonomic Viewfinder
 │   ├── history_screen.dart      # Revamped Journal
-│   ├── map_screen.dart          # Memory Map
-│   ├── settings_screen.dart     # Control Center (Revamped)
-│   └── quiz_screen.dart         # Security challenge system
+│   ├── map_screen.dart          # Memory Map (Offline)
+│   └── settings_screen.dart     # Preference Center
 └── services/
-    ├── database_helper.dart     # DB Operations
-    └── entries_notifier.dart    # Global state & Widget syncing
+    ├── database_helper.dart     # Local DB Engine
+    └── entries_notifier.dart    # Real-time state syncing
 ```
-
-## 📖 Getting Started
-
-1. **Clone & Install**:
-   ```bash
-   git clone https://github.com/LOST-4EVER/SnapLog.git
-   flutter pub get
-   ```
-2. **Run**:
-   ```bash
-   flutter run
-   ```
 
 ---
 
 **developed by LOSY-4EVER ❤️ with Ai**  
-*v1.6.0+8 - Control & Momentum Edition*
+*v1.6.0+8 - Offline Elite Edition*
