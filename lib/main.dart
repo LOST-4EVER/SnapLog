@@ -16,11 +16,14 @@ import 'widgets/streak_badge.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  final cameras = await availableCameras();
+  List<CameraDescription> cameras = [];
+  try {
+    cameras = await availableCameras().timeout(const Duration(seconds: 3));
+  } catch (e) {
+    debugPrint("Camera hardware not detected or timeout: $e");
+  }
   
-  runApp(
-    SnapLogApp(cameras: cameras),
-  );
+  runApp(SnapLogApp(cameras: cameras));
 }
 
 class SnapLogApp extends StatelessWidget {
@@ -115,29 +118,38 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   Future<void> _initApp() async {
-    await Future.wait([
-      NotificationService().init(),
-      AchievementService().initNotificationState(),
-    ]);
+    try {
+      // Parallel background init with timeout safety
+      await Future.wait([
+        NotificationService().init().timeout(const Duration(seconds: 2)),
+        AchievementService().initNotificationState().timeout(const Duration(seconds: 2)),
+      ]).catchError((e) => []);
 
-    final settings = await SettingsService().getSettings();
-    final bool biometricEnabled = settings['biometricLock'] ?? false;
+      final settings = await SettingsService().getSettings();
+      final bool biometricEnabled = settings['biometricLock'] ?? false;
 
-    if (biometricEnabled) {
-      setState(() {
-        _isLocked = true;
-        _isInitializing = false;
-      });
-      _checkBiometricLock();
-    } else {
-      setState(() {
-        _isLocked = false;
-        _isInitializing = false;
-      });
+      if (biometricEnabled) {
+        if (mounted) {
+          setState(() {
+            _isLocked = true;
+            _isInitializing = false;
+          });
+        }
+        _checkBiometricLock();
+      } else {
+        if (mounted) {
+          setState(() {
+            _isLocked = false;
+            _isInitializing = false;
+          });
+        }
+      }
+
+      _initQuickActions();
+      _checkAchievements();
+    } catch (e) {
+      if (mounted) setState(() => _isInitializing = false);
     }
-
-    _initQuickActions();
-    _checkAchievements();
   }
 
   Future<void> _checkBiometricLock() async {
@@ -267,30 +279,30 @@ class _MainNavigationState extends State<MainNavigation> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: _onItemTapped,
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.photo_camera_outlined), selectedIcon: Icon(Icons.photo_camera), label: 'Capture'),
-          NavigationDestination(icon: Icon(Icons.auto_awesome_motion_outlined), selectedIcon: Icon(Icons.auto_awesome_motion), label: 'Journal'),
-          NavigationDestination(icon: Icon(Icons.emoji_events_outlined), selectedIcon: Icon(Icons.emoji_events), label: 'Legacy'),
+        destinations: [
+          const NavigationDestination(icon: Icon(Icons.photo_camera_outlined), selectedIcon: Icon(Icons.photo_camera), label: 'Capture'),
+          const NavigationDestination(icon: Icon(Icons.auto_awesome_motion_outlined), selectedIcon: Icon(Icons.auto_awesome_motion), label: 'Journal'),
+          const NavigationDestination(icon: Icon(Icons.emoji_events_outlined), selectedIcon: Icon(Icons.emoji_events), label: 'Legacy'),
           NavigationDestination(
             icon: Stack(
               clipBehavior: Clip.none,
               children: [
-                Icon(Icons.tune_outlined),
+                const Icon(Icons.tune_outlined),
                 Positioned(
                   top: -8,
                   right: -12,
-                  child: ScaleTransition(scale: AlwaysStoppedAnimation(0.6), child: StreakBadge()),
+                  child: ScaleTransition(scale: const AlwaysStoppedAnimation(0.6), child: const StreakBadge()),
                 ),
               ],
             ),
             selectedIcon: Stack(
               clipBehavior: Clip.none,
               children: [
-                Icon(Icons.tune_rounded),
+                const Icon(Icons.tune_rounded),
                 Positioned(
                   top: -8,
                   right: -12,
-                  child: ScaleTransition(scale: AlwaysStoppedAnimation(0.6), child: StreakBadge()),
+                  child: ScaleTransition(scale: const AlwaysStoppedAnimation(0.6), child: const StreakBadge()),
                 ),
               ],
             ),
