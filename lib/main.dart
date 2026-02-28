@@ -11,12 +11,11 @@ import 'screens/camera_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/advancements_screen.dart';
-import 'widgets/connected_settings_icon.dart';
+import 'widgets/streak_badge.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Non-blocking initialization
   final cameras = await availableCameras();
   
   runApp(
@@ -52,8 +51,6 @@ class SnapLogApp extends StatelessWidget {
   }
 
   ThemeData _buildTheme(ColorScheme colorScheme) {
-    const buttonBorderRadius = 20.0;
-
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
@@ -80,7 +77,7 @@ class SnapLogApp extends StatelessWidget {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size(64, 52),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(buttonBorderRadius)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         ),
       ),
     );
@@ -118,7 +115,6 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   Future<void> _initApp() async {
-    // Parallel background init
     await Future.wait([
       NotificationService().init(),
       AchievementService().initNotificationState(),
@@ -154,9 +150,6 @@ class _MainNavigationState extends State<MainNavigation> {
         if (mounted) setState(() => _isLocked = false);
       }
     } catch (e) {
-      debugPrint("Biometric error: $e");
-      // Fallback: if biometric fails completely, we might want a PIN, 
-      // but for now we'll allow access to prevent permanent lockout.
       if (mounted) setState(() => _isLocked = false);
     }
   }
@@ -251,7 +244,7 @@ class _MainNavigationState extends State<MainNavigation> {
               FilledButton.icon(
                 onPressed: _checkBiometricLock,
                 icon: const Icon(Icons.fingerprint_rounded),
-                label: const Text("UNLOCK NOW"),
+                label: const Text("UNLOCK VAULT"),
               ),
             ],
           ),
@@ -274,12 +267,33 @@ class _MainNavigationState extends State<MainNavigation> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: _onItemTapped,
-        destinations: [
-          const NavigationDestination(icon: Icon(Icons.photo_camera_outlined), selectedIcon: Icon(Icons.photo_camera), label: 'Capture'),
-          const NavigationDestination(icon: Icon(Icons.auto_awesome_motion_outlined), selectedIcon: Icon(Icons.auto_awesome_motion), label: 'Journal'),
-          const NavigationDestination(icon: Icon(Icons.emoji_events_outlined), selectedIcon: Icon(Icons.emoji_events), label: 'Legacy'),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.photo_camera_outlined), selectedIcon: Icon(Icons.photo_camera), label: 'Capture'),
+          NavigationDestination(icon: Icon(Icons.auto_awesome_motion_outlined), selectedIcon: Icon(Icons.auto_awesome_motion), label: 'Journal'),
+          NavigationDestination(icon: Icon(Icons.emoji_events_outlined), selectedIcon: Icon(Icons.emoji_events), label: 'Legacy'),
           NavigationDestination(
-            icon: ConnectedSettingsIcon(isSelected: _selectedIndex == 3),
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(Icons.tune_outlined),
+                Positioned(
+                  top: -8,
+                  right: -12,
+                  child: ScaleTransition(scale: AlwaysStoppedAnimation(0.6), child: StreakBadge()),
+                ),
+              ],
+            ),
+            selectedIcon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(Icons.tune_rounded),
+                Positioned(
+                  top: -8,
+                  right: -12,
+                  child: ScaleTransition(scale: AlwaysStoppedAnimation(0.6), child: StreakBadge()),
+                ),
+              ],
+            ),
             label: 'Elite',
           ),
         ],

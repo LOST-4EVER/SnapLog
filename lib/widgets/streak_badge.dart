@@ -69,7 +69,6 @@ class _StreakBadgeState extends State<StreakBadge> with SingleTickerProviderStat
         return AnimatedBuilder(
           animation: _scaleAnimation,
           builder: (context, child) {
-            // Map 0->1 to 1.0->1.2->1.0 effectively via curve or just a simpler scale
             double scale = 1.0 + (_scaleAnimation.value * 0.2);
             return Transform.scale(
               scale: scale,
@@ -77,7 +76,7 @@ class _StreakBadgeState extends State<StreakBadge> with SingleTickerProviderStat
             );
           },
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: isLit ? Colors.orange.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
@@ -85,34 +84,30 @@ class _StreakBadgeState extends State<StreakBadge> with SingleTickerProviderStat
                 color: isLit ? Colors.orange.withValues(alpha: 0.5) : Colors.grey.withValues(alpha: 0.3),
                 width: 1.5,
               ),
-              boxShadow: isLit ? [
-                BoxShadow(
-                  color: Colors.orange.withValues(alpha: 0.2),
-                  blurRadius: 8,
-                  spreadRadius: 1,
-                )
-              ] : null,
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.local_fire_department_rounded,
-                  color: isLit ? Colors.orange : Colors.grey,
-                  size: widget.size,
-                ),
-                if (streak > 0) ...[
-                  const SizedBox(width: 4),
-                  Text(
-                    "$streak",
-                    style: TextStyle(
-                      color: isLit ? Colors.orange : Colors.grey,
-                      fontWeight: FontWeight.w900,
-                      fontSize: widget.size * 0.7,
-                    ),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.local_fire_department_rounded,
+                    color: isLit ? Colors.orange : Colors.grey,
+                    size: widget.size,
                   ),
+                  if (streak > 0) ...[
+                    const SizedBox(width: 4),
+                    Text(
+                      "$streak",
+                      style: TextStyle(
+                        color: isLit ? Colors.orange : Colors.grey,
+                        fontWeight: FontWeight.w900,
+                        fontSize: widget.size * 0.8,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         );

@@ -31,9 +31,6 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   bool _isCapturingPhoto = false;
   
   bool _showGrid = false;
-  double _exposureOffset = 0.0;
-  final double _minExposure = 0.0;
-  final double _maxExposure = 0.0;
 
   ColorFilter _currentFilter = const ColorFilter.mode(Colors.transparent, BlendMode.dst);
   String _filterName = "Normal";
@@ -234,13 +231,6 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     }
   }
 
-  Future<void> _resetExposure() async {
-    if (_controller == null) return;
-    await _controller!.setExposureOffset(0.0);
-    setState(() => _exposureOffset = 0.0);
-    if (_hapticEnabled) HapticFeedback.lightImpact();
-  }
-
   Future<String?> _getCurrentLocation() async {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -356,12 +346,6 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     } finally {
       if (mounted) setState(() => _isCapturingPhoto = false);
     }
-  }
-
-  Future<void> _handleExposureChanged(double value) async {
-    if (_controller == null) return;
-    setState(() => _exposureOffset = value);
-    await _controller!.setExposureOffset(value);
   }
 
   @override
@@ -497,74 +481,13 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
           colors: [Colors.transparent, Colors.black.withValues(alpha: 0.8)],
         ),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildGalleryButton(colorScheme),
-              _buildCaptureShutter(colorScheme),
-              _buildFlipButton(colorScheme),
-            ],
-          ),
-          if (!_useSystemCamera && _isCameraInitialized) ...[
-            const SizedBox(height: 20),
-            _buildExposureSlider(),
-          ],
+          _buildGalleryButton(colorScheme),
+          _buildCaptureShutter(colorScheme),
+          _buildFlipButton(colorScheme),
         ],
-      ),
-    );
-  }
-
-  Widget _buildExposureSlider() {
-    return Center(
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-          child: Container(
-            width: 220,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white10),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.refresh_rounded, color: Colors.white54, size: 16),
-                  onPressed: _resetExposure,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-                const SizedBox(width: 4),
-                const Icon(Icons.light_mode_outlined, color: Colors.white54, size: 14),
-                Expanded(
-                  child: SliderTheme(
-                    data: const SliderThemeData(
-                      trackHeight: 2,
-                      thumbShape: RoundSliderThumbShape(enabledThumbRadius: 5),
-                      overlayShape: RoundSliderOverlayShape(overlayRadius: 12),
-                      activeTrackColor: Colors.yellow,
-                      inactiveTrackColor: Colors.white24,
-                      thumbColor: Colors.white,
-                    ),
-                    child: Slider(
-                      value: _exposureOffset,
-                      min: _minExposure,
-                      max: _maxExposure,
-                      onChanged: _handleExposureChanged,
-                    ),
-                  ),
-                ),
-                const Icon(Icons.light_mode, color: Colors.yellow, size: 14),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }

@@ -7,7 +7,6 @@ import '../services/entries_notifier.dart';
 import '../services/settings_service.dart';
 import '../services/insights_service.dart';
 import '../widgets/entry_widgets.dart';
-import 'map_screen.dart';
 
 enum ViewMode { day, month, year }
 
@@ -41,10 +40,13 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
     );
     _fadeAnimation = CurvedAnimation(parent: _animationController, curve: Curves.easeOutQuart);
     _notifier = EntriesNotifier();
-    _notifier.addListener(_refreshEntries);
+    _notifierListener = () => _refreshEntries();
+    _notifier.addListener(_notifierListener);
     _refreshEntries();
     _loadSettings();
   }
+
+  late final VoidCallback _notifierListener;
 
   Future<void> _loadSettings() async {
     final settings = await SettingsService().getSettings();
@@ -57,7 +59,7 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
 
   @override
   void dispose() {
-    _notifier.removeListener(_refreshEntries);
+    _notifier.removeListener(_notifierListener);
     _animationController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -97,13 +99,6 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
             title: const Text("Journal Archive"),
             centerTitle: true,
             actions: [
-              IconButton(
-                icon: const Icon(Icons.map_rounded),
-                onPressed: () {
-                  if (_hapticEnabled) HapticFeedback.lightImpact();
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const MapScreen()));
-                },
-              ),
               IconButton(
                 icon: Icon(_showInsights ? Icons.insights_rounded : Icons.insights_outlined),
                 onPressed: () {
@@ -347,49 +342,51 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
   }
 
   Widget _buildGallery(List<PhotoEntry> entries) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 500),
-      transitionBuilder: (child, animation) => FadeTransition(
-        opacity: animation,
-        child: SlideTransition(
-          position: Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero).animate(animation),
-          child: child,
+    return SliverToBoxAdapter(
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 500),
+        transitionBuilder: (child, animation) => FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero).animate(animation),
+            child: child,
+          ),
         ),
+        child: _viewMode == ViewMode.day 
+          ? _buildMemoirList(entries) 
+          : _buildMosaicGrid(entries, _viewMode == ViewMode.month ? 3 : 5),
       ),
-      child: _viewMode == ViewMode.day 
-        ? _buildMemoirList(entries) 
-        : _buildMosaicGrid(entries, _viewMode == ViewMode.month ? 3 : 5),
     );
   }
 
   Widget _buildMemoirList(List<PhotoEntry> entries) {
-    return SliverPadding(
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      sliver: SliverList.separated(
-        separatorBuilder: (context, index) => const SizedBox(height: 24),
-        itemCount: entries.length,
-        itemBuilder: (context, index) => EntryCard(entry: entries[index], onRefresh: _refreshEntries, hapticEnabled: _hapticEnabled),
-      ),
+      separatorBuilder: (context, index) => const SizedBox(height: 24),
+      itemCount: entries.length,
+      itemBuilder: (context, index) => EntryCard(entry: entries[index], onRefresh: _refreshEntries, hapticEnabled: _hapticEnabled),
     );
   }
 
   Widget _buildMosaicGrid(List<PhotoEntry> entries, int crossAxisCount) {
-    return SliverPadding(
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
-      sliver: SliverGrid.builder(
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: crossAxisCount, 
-          crossAxisSpacing: 12, 
-          mainAxisSpacing: 12,
-          childAspectRatio: 1,
-        ),
-        itemCount: entries.length,
-        itemBuilder: (context, index) => GridItem(
-          entry: entries[index], 
-          showDetails: crossAxisCount < 5,
-          onRefresh: _refreshEntries, 
-          hapticEnabled: _hapticEnabled
-        ),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount, 
+        crossAxisSpacing: 12, 
+        mainAxisSpacing: 12,
+        childAspectRatio: 1,
+      ),
+      itemCount: entries.length,
+      itemBuilder: (context, index) => GridItem(
+        entry: entries[index], 
+        showDetails: crossAxisCount < 5,
+        onRefresh: _refreshEntries, 
+        hapticEnabled: _hapticEnabled
       ),
     );
   }

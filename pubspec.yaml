@@ -1,7 +1,7 @@
 name: snaplog
 description: "SnapLog Pro - A professional-grade daily photo-journaling application."
 publish_to: 'none'
-version: 1.6.0+8
+version: 1.0.0+10
 
 environment:
   sdk: ^3.11.0
@@ -31,7 +31,6 @@ dependencies:
   dynamic_color: ^1.7.0
   speech_to_text: ^7.0.0
   local_auth: ^2.3.0
-  google_maps_flutter: ^2.10.0
   home_widget: ^0.7.0
 
 dev_dependencies:

@@ -75,9 +75,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
         title: const Text("Restart Required"),
-        content: const Text("Some changes require an app restart to take full effect for hardware optimization."),
+        content: const Text("Hardware optimizations will take full effect after restarting SnapLog."),
         actions: [
-          FilledButton(onPressed: () => Navigator.pop(context), child: const Text("GOT IT")),
+          FilledButton(onPressed: () => Navigator.pop(context), child: const Text("UNDERSTOOD")),
         ],
       ),
     );
@@ -138,7 +138,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!canAuthenticate) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Biometrics not available on this device")),
+            const SnackBar(content: Text("Hardware security not available")),
           );
         }
         return;
@@ -146,7 +146,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       try {
         final bool authenticated = await _auth.authenticate(
-          localizedReason: 'Verify identity to enable lock',
+          localizedReason: 'Verify to enable Vault Lock',
           options: const AuthenticationOptions(stickyAuth: true, biometricOnly: true),
         );
         if (!authenticated) return;
@@ -218,13 +218,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar.large(
-            title: const Text("Elite Preferences"),
+            title: const Text("Elite Configuration"),
             centerTitle: true,
             actions: [
               IconButton(
                 onPressed: _resetToDefaults,
-                icon: const Icon(Icons.refresh_rounded),
-                tooltip: "Reset All Settings",
+                icon: const Icon(Icons.restart_alt_rounded),
+                tooltip: "Reset All",
               ),
               const SizedBox(width: 8),
             ],
@@ -238,28 +238,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _buildStreakHero(colorScheme),
                   const SizedBox(height: 24),
                   
-                  const _SectionHeader(title: "Privacy Vault"),
+                  const _SectionHeader(title: "Security & Access"),
                   _buildSettingsCard(
                     children: [
                       SwitchListTile(
                         value: _biometricLock,
                         onChanged: _toggleBiometrics,
-                        secondary: Icon(Icons.fingerprint_rounded, color: colorScheme.primary, size: 24),
-                        title: const Text("Hardware Lock", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                        subtitle: const Text("Use Fingerprint or Face ID"),
+                        secondary: Icon(Icons.fingerprint_rounded, color: colorScheme.primary),
+                        title: const Text("Biometric Vault Lock", style: TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: const Text("Fingerprint or Face ID required"),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       ),
                     ],
                   ),
 
                   const SizedBox(height: 24),
-                  const _SectionHeader(title: "Hardware & Quality"),
+                  const _SectionHeader(title: "Pro Capture System"),
                   _buildSettingsCard(
                     children: [
                       _SettingsTile(
-                        icon: Icons.photo_camera_rounded,
-                        title: "Daily Snap Limit",
-                        subtitle: "$_dailyLimit photos allowed",
+                        icon: Icons.camera_alt_rounded,
+                        title: "Daily Journal Limit",
+                        subtitle: "$_dailyLimit photos / 24h",
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -279,9 +279,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       SwitchListTile(
                         value: _useSystemCamera,
                         onChanged: _toggleSystemCamera,
-                        secondary: Icon(Icons.settings_input_component_rounded, color: colorScheme.primary, size: 24),
-                        title: const Text("Hardware Integration", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                        subtitle: const Text("Direct system camera access"),
+                        secondary: Icon(Icons.settings_input_component_rounded, color: colorScheme.primary),
+                        title: const Text("Hardware Integration", style: TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: const Text("Use system camera processing"),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       ),
                       const Divider(height: 1, indent: 56, endIndent: 16),
@@ -295,21 +295,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   
                   const SizedBox(height: 24),
-                  const _SectionHeader(title: "Experience Engine"),
+                  const _SectionHeader(title: "Experience & Feel"),
                   _buildSettingsCard(
                     children: [
                       SwitchListTile(
                         value: _remindersEnabled,
                         onChanged: _toggleReminders,
-                        secondary: Icon(Icons.alarm_rounded, color: colorScheme.primary, size: 24),
-                        title: const Text("Daily Reminders", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        secondary: Icon(Icons.alarm_on_rounded, color: colorScheme.primary),
+                        title: const Text("Smart Reminders", style: TextStyle(fontWeight: FontWeight.bold)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       ),
                       if (_remindersEnabled) ...[
                         const Divider(height: 1, indent: 56, endIndent: 16),
                         _SettingsTile(
                           icon: Icons.schedule_rounded,
-                          title: "Reminder Time",
+                          title: "Delivery Time",
                           subtitle: _reminderTime.format(context),
                           onTap: _selectTime,
                         ),
@@ -318,16 +318,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       SwitchListTile(
                         value: _hapticFeedback,
                         onChanged: _toggleHaptics,
-                        secondary: Icon(Icons.vibration_rounded, color: colorScheme.primary, size: 24),
-                        title: const Text("Tactile Feedback", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        secondary: Icon(Icons.vibration_rounded, color: colorScheme.primary),
+                        title: const Text("Tactile Engine", style: TextStyle(fontWeight: FontWeight.bold)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       ),
                       const Divider(height: 1, indent: 56, endIndent: 16),
                       SwitchListTile(
                         value: _shutterSound,
                         onChanged: _toggleShutterSound,
-                        secondary: Icon(Icons.volume_up_rounded, color: colorScheme.primary, size: 24),
-                        title: const Text("Audio Cues", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        secondary: Icon(Icons.volume_up_rounded, color: colorScheme.primary),
+                        title: const Text("Audio Confirmation", style: TextStyle(fontWeight: FontWeight.bold)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       ),
                       const Divider(height: 1, indent: 56, endIndent: 16),
@@ -338,30 +338,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           if (mounted) setState(() => _showWidgetOnHome = v);
                           _notifyChange();
                         },
-                        secondary: Icon(Icons.widgets_rounded, color: colorScheme.primary, size: 24),
-                        title: const Text("Home Screen Widget", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        secondary: Icon(Icons.widgets_rounded, color: colorScheme.primary),
+                        title: const Text("Home Screen Widget", style: TextStyle(fontWeight: FontWeight.bold)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       ),
                     ],
                   ),
 
                   const SizedBox(height: 24),
-                  const _SectionHeader(title: "Data Stewardship"),
+                  const _SectionHeader(title: "Maintenance"),
                   _buildSettingsCard(
                     color: colorScheme.errorContainer.withValues(alpha: 0.05),
                     children: [
                       _SettingsTile(
                         icon: Icons.cleaning_services_rounded,
-                        title: "Optimize Storage",
-                        subtitle: "Clear temporary artifacts",
+                        title: "Optimize Local Storage",
                         onTap: () => _clearCache(),
                       ),
                       const Divider(height: 1, indent: 56, endIndent: 16),
                       _SettingsTile(
                         icon: Icons.delete_forever_rounded,
-                        title: "Destroy All Memories",
+                        title: "Factory Data Reset",
                         textColor: colorScheme.error,
-                        subtitle: "Irreversible data wipeout",
                         onTap: () => _fullReset(),
                       ),
                     ],
@@ -371,10 +369,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Center(
                     child: Column(
                       children: [
-                        const Text("SnapLog Pro", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1)),
-                        const SizedBox(height: 2),
-                        const Text("v1.6.0+8", style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 12),
+                        const Text("SnapLog Pro", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                        const SizedBox(height: 4),
+                        const Text("Version 1.0.0", style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 16),
+                        const Text("Made by Lost Forever", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                        const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text("with ", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                            Icon(Icons.favorite, size: 14, color: Colors.red),
+                            Text(" and with AI", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           decoration: BoxDecoration(
@@ -387,7 +395,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             children: [
                               Icon(Icons.verified_user_rounded, size: 14, color: Colors.green),
                               SizedBox(width: 8),
-                              Text("Certified 100% Offline Secure", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.green)),
+                              Text("100% Offline Secure", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.green)),
                             ],
                           ),
                         ),
@@ -422,16 +430,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
           )
         ],
       ),
-      child: Row(
+      child: const Row(
         children: [
-          const StreakBadge(size: 60),
-          const SizedBox(width: 24),
-          const Expanded(
+          StreakBadge(size: 60),
+          SizedBox(width: 24),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "ACTIVE MOMENTUM",
+                  "CURRENT MOMENTUM",
                   style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 10),
                 ),
                 SizedBox(height: 4),
