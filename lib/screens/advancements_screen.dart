@@ -125,7 +125,7 @@ class _AdvancementsScreenState extends State<AdvancementsScreen> with SingleTick
 
   Widget _buildGalleryTab(List<Achievement> all, ColorScheme colorScheme) {
     return GridView.builder(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
         mainAxisSpacing: 20,
@@ -135,9 +135,23 @@ class _AdvancementsScreenState extends State<AdvancementsScreen> with SingleTick
       itemCount: all.length,
       itemBuilder: (context, index) {
         final a = all[index];
-        return _AchievementBadge(
-          achievement: a, 
-          onTap: () => _showAchievementDetails(a),
+        return TweenAnimationBuilder<double>(
+          duration: Duration(milliseconds: 600 + (index % 6 * 100)),
+          tween: Tween(begin: 0.0, end: 1.0),
+          curve: Curves.easeOutBack,
+          builder: (context, value, child) {
+            return Transform.scale(
+              scale: value,
+              child: Opacity(
+                opacity: value.clamp(0.0, 1.0),
+                child: child,
+              ),
+            );
+          },
+          child: _AchievementBadge(
+            achievement: a,
+            onTap: () => _showAchievementDetails(a),
+          ),
         );
       },
     );

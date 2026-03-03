@@ -118,7 +118,7 @@ class MainNavigation extends StatefulWidget {
   State<MainNavigation> createState() => _MainNavigationState();
 }
 
-class _MainNavigationState extends State<MainNavigation> {
+class _MainNavigationState extends State<MainNavigation> with WidgetsBindingObserver {
   int _selectedIndex = 0;
   late PageController _pageController;
   final QuickActions _quickActions = const QuickActions();
@@ -128,10 +128,12 @@ class _MainNavigationState extends State<MainNavigation> {
   
   bool _isInitializing = true;
   bool _isLocked = false;
+  bool _biometricEnabled = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _pageController = PageController(initialPage: _selectedIndex);
     _notifier = EntriesNotifier();
     _notifierListener = () => _checkAchievements();
@@ -149,9 +151,9 @@ class _MainNavigationState extends State<MainNavigation> {
       ]).catchError((e) => []);
 
       final settings = await SettingsService().getSettings();
-      final bool biometricEnabled = settings['biometricLock'] ?? false;
+      _biometricEnabled = settings['biometricLock'] ?? false;
 
-      if (biometricEnabled) {
+      if (_biometricEnabled) {
         if (mounted) {
           setState(() {
             _isLocked = true;
@@ -172,6 +174,19 @@ class _MainNavigationState extends State<MainNavigation> {
       _checkAchievements();
     } catch (e) {
       if (mounted) setState(() => _isInitializing = false);
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!_biometricEnabled) return;
+
+    if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
+      setState(() {
+        _isLocked = true;
+      });
+    } else if (state == AppLifecycleState.resumed) {
+      _checkBiometricLock();
     }
   }
 
@@ -206,6 +221,13 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   Future<void> _checkAchievements() async {
+    final settings = await SettingsService().getSettings();
+    if (mounted) {
+      setState(() {
+        _biometricEnabled = settings['biometricLock'] ?? false;
+      });
+    }
+
     await AchievementService().checkNewUnlocks((achievement) {
       if (!mounted) return;
       _showAchievementToast(achievement);
@@ -263,6 +285,7 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _notifier.removeListener(_notifierListener);
     _pageController.dispose();
     super.dispose();

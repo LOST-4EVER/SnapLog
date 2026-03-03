@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'database_helper.dart';
+import 'settings_service.dart';
 
 class Achievement {
   final String id;
@@ -180,11 +181,24 @@ class AchievementService {
           stat = "$count/5";
           break;
         case 'vault_warden':
-          final count = prefs.getInt('settingsChangeCount') ?? 0; // Simple proxy for now
-          // In a real app we'd track biometric enabled duration
-          unlocked = count >= 30; 
-          progress = (count / 30).clamp(0.0, 1.0);
-          stat = "$count/30 units";
+          final lastCheck = prefs.getInt('biometric_last_check') ?? DateTime.now().millisecondsSinceEpoch;
+          final currentDays = prefs.getInt('biometric_days_count') ?? 0;
+          final biometricEnabled = (await SettingsService().getSettings())['biometricLock'] ?? false;
+
+          int totalDays = currentDays;
+          if (biometricEnabled) {
+            final now = DateTime.now();
+            final lastDate = DateTime.fromMillisecondsSinceEpoch(lastCheck);
+            if (now.day != lastDate.day || now.month != lastDate.month || now.year != lastDate.year) {
+              totalDays++;
+              await prefs.setInt('biometric_days_count', totalDays);
+              await prefs.setInt('biometric_last_check', now.millisecondsSinceEpoch);
+            }
+          }
+
+          unlocked = totalDays >= 30;
+          progress = (totalDays / 30).clamp(0.0, 1.0);
+          stat = "$totalDays/30 days";
           break;
         case 'cleaner':
           final count = prefs.getInt('cacheClearCount') ?? 0;

@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import '../services/notification_service.dart';
 import '../models/photo_entry.dart';
 import '../services/database_helper.dart';
 import '../services/entries_notifier.dart';
@@ -121,6 +122,9 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
 
       await DatabaseHelper().insertEntry(entry);
       EntriesNotifier().notifyEntryAdded();
+
+      // Cancel "Streak Revive" notification for today as photo is taken
+      await NotificationService().cancelNotification(1);
 
       if (_hapticEnabled) HapticFeedback.heavyImpact();
 

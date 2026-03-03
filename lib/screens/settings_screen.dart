@@ -642,17 +642,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _fullReset() async {
+    final bool? passedQuiz = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const QuizScreen(difficulty: QuizDifficulty.hard)),
+    );
+
+    if (passedQuiz != true) return;
+
+    if (!mounted) return;
+
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        title: const Text("DATA WIPE?", style: TextStyle(color: Colors.red, fontWeight: FontWeight.w900)),
+        title: const Text("FINAL CONFIRMATION"),
+        content: const Text("This will permanently delete all your photos and reset all settings. This action cannot be undone."),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("ABORT")),
           FilledButton(
             onPressed: () => Navigator.pop(context, true), 
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text("ERASE")
+            child: const Text("ERASE EVERYTHING")
           ),
         ],
       ),
@@ -663,6 +673,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!mounted) return;
       _loadSettings();
       _notifyChange();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("All data has been wiped.")));
     }
   }
 }
