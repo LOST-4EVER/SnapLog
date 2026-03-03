@@ -162,6 +162,10 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
   Future<void> _initializeCamera(CameraDescription cameraDescription) async {
     if (_initializeControllerFuture != null || _isCapturingPhoto) return;
+    if (_controller != null) {
+      await _controller!.dispose();
+      _controller = null;
+    }
 
     ResolutionPreset preset;
     switch (_imageQuality) {
@@ -253,10 +257,10 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   Future<void> _toggleCamera() async {
     if (_useSystemCamera) return;
     if (widget.cameras.length < 2) return;
+    if (_isCapturingPhoto) return;
+
     _selectedCameraIndex = (_selectedCameraIndex + 1) % widget.cameras.length;
     setState(() => _isCameraInitialized = false);
-    await _controller?.dispose();
-    _controller = null;
     await _initializeCamera(widget.cameras[_selectedCameraIndex]);
     if (_hapticEnabled) HapticFeedback.mediumImpact();
   }
@@ -652,7 +656,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     return _ProIconButton(
       icon: Icons.flip_camera_ios_rounded,
       onPressed: _toggleCamera,
-      isDisabled: _useSystemCamera,
+      isDisabled: _useSystemCamera || widget.cameras.length < 2,
     );
   }
 

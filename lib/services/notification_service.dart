@@ -95,7 +95,7 @@ class NotificationService {
     // Schedule a "Revive Streak" reminder 2 hours later if count is still 0
     // Note: This is a static schedule. In a production app, we'd check the DB 
     // before showing the notification.
-    _scheduleStreakRevive(scheduledDate.add(const Duration(hours: 2)));
+    await _scheduleStreakRevive(scheduledDate.add(const Duration(hours: 2)));
   }
 
   Future<void> _scheduleStreakRevive(tz.TZDateTime scheduledDate) async {
@@ -117,6 +117,10 @@ class NotificationService {
       uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
     );
+  }
+
+  Future<void> cancelNotification(int id) async {
+    await _notifications.cancel(id);
   }
 
   Future<void> cancelAllReminders() async {
